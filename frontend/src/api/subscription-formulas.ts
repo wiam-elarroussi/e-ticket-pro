@@ -18,6 +18,7 @@ export interface SubscriptionFormulaPayload {
   validFrom: string;
   validTo: string;
   eventIds?: string[];
+  globalAccess?: boolean;
 }
 
 export function createSubscriptionFormula(payload: SubscriptionFormulaPayload) {

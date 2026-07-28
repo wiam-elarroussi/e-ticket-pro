@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { AlertTriangle, CheckCircle2, ScanLine, ShieldAlert, XCircle } from 'lucide-react';
 import { useEvents } from '@/hooks/useEvents';
 import { useGates } from '@/hooks/useGates';
@@ -13,6 +14,10 @@ import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { RequirePermission } from '@/components/auth/RequirePermission';
 import { ScanResponse, ScanResult } from '@/lib/access-types';
+
+const CameraScanner = dynamic(() => import('@/components/access/CameraScanner').then((m) => m.CameraScanner), {
+  ssr: false,
+});
 
 type ScanMode = 'TICKET' | 'SUBSCRIPTION';
 
@@ -58,14 +63,15 @@ function AccessPageContent() {
 
   const canScan = !!eventId && !!gateId && inputValue.trim().length > 0;
 
-  const runScan = (force = false) => {
-    if (!canScan) return;
+  const runScan = (force = false, codeOverride?: string) => {
+    const value = (codeOverride ?? inputValue).trim();
+    if (!eventId || !gateId || !value) return;
     scan.mutate(
       {
         eventId,
         gateId,
-        code: mode === 'TICKET' ? inputValue.trim() : undefined,
-        subscriptionId: mode === 'SUBSCRIPTION' ? inputValue.trim() : undefined,
+        code: mode === 'TICKET' ? value : undefined,
+        subscriptionId: mode === 'SUBSCRIPTION' ? value : undefined,
         force,
       },
       {
@@ -75,6 +81,13 @@ function AccessPageContent() {
         },
       },
     );
+  };
+
+  /** Détection caméra : envoie directement le code décodé (pas d'attente d'appui sur Entrée),
+   * même principe qu'une douchette QR/code-barres physique. */
+  const handleCameraDetected = (code: string) => {
+    if (!eventId || !gateId || scan.isPending) return;
+    runScan(false, code);
   };
 
   const config = lastResult ? resultConfig[lastResult.result] : null;
@@ -133,6 +146,15 @@ function AccessPageContent() {
             Scanner
           </Button>
         </div>
+
+        {mode === 'TICKET' && (
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <CameraScanner onDetected={handleCameraDetected} disabled={!eventId || !gateId} />
+            {(!eventId || !gateId) && (
+              <p className="mt-1 text-xs text-slate-400">Choisissez d’abord un événement et une porte.</p>
+            )}
+          </div>
+        )}
       </div>
 
       {lastResult && config && (

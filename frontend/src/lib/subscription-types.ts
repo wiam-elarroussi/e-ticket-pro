@@ -17,6 +17,7 @@ export interface SubscriptionFormula {
   price: string;
   validFrom: string;
   validTo: string;
+  globalAccess: boolean;
   createdAt: string;
   updatedAt: string;
   includedEvents?: SubscriptionFormulaEvent[];

@@ -31,6 +31,7 @@ const schema = z
     price: z.number().min(0, 'Le prix doit être positif ou nul'),
     validFrom: z.string().min(1, 'Date de début requise'),
     validTo: z.string().min(1, 'Date de fin requise'),
+    globalAccess: z.boolean(),
   })
   .superRefine((values, ctx) => {
     if (values.validFrom && values.validTo && new Date(values.validTo) <= new Date(values.validFrom)) {
@@ -63,6 +64,10 @@ export function SubscriptionFormulaFormModal({ open, onClose, formula }: Subscri
         price: formula ? Number(formula.price) : 0,
         validFrom: toDatetimeLocal(formula?.validFrom),
         validTo: toDatetimeLocal(formula?.validTo),
+        // Par défaut, une nouvelle formule (type Saison) couvre tous les événements — cas le plus
+        // courant ; l'admin peut décocher pour une formule ciblée (éliminatoires/poules) et gérer
+        // un calendrier explicite via la liste des événements inclus.
+        globalAccess: formula ? formula.globalAccess : true,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,6 +84,7 @@ export function SubscriptionFormulaFormModal({ open, onClose, formula }: Subscri
           price: values.price,
           validFrom: fromDatetimeLocal(values.validFrom),
           validTo: fromDatetimeLocal(values.validTo),
+          globalAccess: values.globalAccess,
         },
       });
     } else {
@@ -89,6 +95,7 @@ export function SubscriptionFormulaFormModal({ open, onClose, formula }: Subscri
         price: values.price,
         validFrom: fromDatetimeLocal(values.validFrom),
         validTo: fromDatetimeLocal(values.validTo),
+        globalAccess: values.globalAccess,
       });
     }
     onClose();
@@ -138,6 +145,15 @@ export function SubscriptionFormulaFormModal({ open, onClose, formula }: Subscri
             {...form.register('validTo')}
           />
         </div>
+
+        <label className="flex items-start gap-2 rounded-lg bg-slate-50 p-3 ring-1 ring-inset ring-slate-200">
+          <input type="checkbox" className="mt-0.5 rounded border-slate-300" {...form.register('globalAccess')} />
+          <span className="text-sm text-slate-700">
+            <span className="font-medium">Accès global</span> — donne accès à tous les événements de l’enceinte,
+            sans avoir à gérer un calendrier. Décochez pour restreindre cette formule à une liste explicite
+            d’événements (onglet « Calendrier inclus »).
+          </span>
+        </label>
 
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

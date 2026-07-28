@@ -131,6 +131,7 @@ function SubscriptionFormulaDetailPageContent() {
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <h1 className="text-xl font-semibold text-slate-900">{formula.name}</h1>
           <Badge tone="indigo">{typeLabels[formula.type]}</Badge>
+          {formula.globalAccess && <Badge tone="green">Accès global (tous les événements)</Badge>}
           {canUpdate && (
             <Button variant="ghost" onClick={() => setEditingFormula(true)} title="Modifier">
               <Pencil className="h-4 w-4" />
@@ -152,7 +153,9 @@ function SubscriptionFormulaDetailPageContent() {
       <div className="mb-3">
         <h2 className="font-medium text-slate-900">Calendrier inclus</h2>
         <p className="text-sm text-slate-500">
-          Événements de cette enceinte pour lesquels l’abonnement donne une entrée automatique.
+          {formula.globalAccess
+            ? 'Accès global activé : cette formule donne déjà accès à tous les événements de l’enceinte, quel que soit ce calendrier — celui-ci ne sert que si l’accès global est désactivé.'
+            : 'Événements de cette enceinte pour lesquels l’abonnement donne une entrée automatique.'}
         </p>
       </div>
 

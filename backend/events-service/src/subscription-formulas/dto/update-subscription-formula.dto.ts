@@ -1,4 +1,4 @@
-import { IsDateString, IsNumber, IsOptional, IsString, Min, MaxLength } from 'class-validator';
+import { IsBoolean, IsDateString, IsNumber, IsOptional, IsString, Min, MaxLength } from 'class-validator';
 
 export class UpdateSubscriptionFormulaDto {
   @IsOptional()
@@ -18,4 +18,8 @@ export class UpdateSubscriptionFormulaDto {
   @IsOptional()
   @IsDateString()
   validTo?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  globalAccess?: boolean;
 }

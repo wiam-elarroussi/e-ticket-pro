@@ -135,6 +135,11 @@ model SubscriptionFormula {
   validFrom DateTime @map("valid_from")
   validTo   DateTime @map("valid_to")
 
+  // Accès global : la formule donne accès à TOUS les événements de l'enceinte (indépendamment du
+  // calendrier inclus ci-dessous) — cas courant d'un abonnement "saison" plutôt qu'un abonnement
+  // ciblé (éliminatoires/poules) où seul un sous-ensemble d'événements doit être couvert.
+  globalAccess Boolean @default(false) @map("global_access")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

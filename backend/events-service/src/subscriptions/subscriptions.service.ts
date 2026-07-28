@@ -63,7 +63,8 @@ export class SubscriptionsService {
       return { granted: false, reason: 'Hors période de validité de la formule' };
     }
 
-    const included = subscription.formula.includedEvents.some((e) => e.eventId === eventId);
+    const included =
+      subscription.formula.globalAccess || subscription.formula.includedEvents.some((e) => e.eventId === eventId);
     if (!included) {
       return { granted: false, reason: "Cet événement n'est pas inclus dans la formule" };
     }

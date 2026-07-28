@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, ShieldCheck, MonitorSmartphone, Handshake, Landmark, CalendarDays, Tags, Ticket, LayoutTemplate, ShoppingCart, Receipt, ScanLine } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldCheck, MonitorSmartphone, Handshake, Landmark, CalendarDays, Tags, Ticket, LayoutTemplate, ShoppingCart, Receipt, ScanLine, Radio } from 'lucide-react';
 
 export interface NavItem {
   href: string;
@@ -14,6 +14,7 @@ export const navItems: NavItem[] = [
   { href: '/dashboard/roles', label: 'Rôles & permissions', icon: ShieldCheck, requiredPermission: 'roles:manage' },
   { href: '/dashboard/sessions', label: 'Sessions', icon: MonitorSmartphone },
   { href: '/dashboard/partners', label: 'Partenaires', icon: Handshake, requiredPermission: 'partners:read' },
+  { href: '/dashboard/sales-channels', label: 'Canaux de vente', icon: Radio, requiredPermission: 'channels:read' },
   { href: '/dashboard/venues', label: 'Enceintes', icon: Landmark, requiredPermission: 'venues:read' },
   { href: '/dashboard/events', label: 'Événements', icon: CalendarDays, requiredPermission: 'events:read' },
   { href: '/dashboard/ticket-categories', label: 'Catégories de billets', icon: Tags, requiredPermission: 'pricing:read' },

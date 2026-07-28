@@ -18,6 +18,7 @@ export class SubscriptionFormulasService {
         price: dto.price,
         validFrom: new Date(dto.validFrom),
         validTo: new Date(dto.validTo),
+        globalAccess: dto.globalAccess ?? false,
         includedEvents: dto.eventIds
           ? { createMany: { data: dto.eventIds.map((eventId) => ({ eventId })) } }
           : undefined,
@@ -58,6 +59,7 @@ export class SubscriptionFormulasService {
         price: dto.price,
         validFrom: dto.validFrom ? new Date(dto.validFrom) : undefined,
         validTo: dto.validTo ? new Date(dto.validTo) : undefined,
+        globalAccess: dto.globalAccess,
       },
     });
   }
