@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Gabarit visuel : dimensions du support (badge/billet), couleur/logo de
+// fond, et liste d'éléments positionnés librement (texte, image/sponsor,
+// QR code, code-barres). `elements` est un JSON libre plutôt qu'un modèle
+// à part : chaque élément a sa propre forme selon son `type`, et le
+// gabarit est modifié en bloc depuis l'éditeur visuel (pas d'édition
+// unitaire d'un élément côté API).
+//
+// Un élément texte peut être lié aux données de l'événement/acheteur via
+// `binding` (chemin pointé, ex: "event.name", "buyer.fullName") — résolu
+// au moment du rendu par le moteur d'injection (voir GeneratedTicket).
+model TicketTemplate {
+  id              String  @id @default(uuid()) @db.Uuid
+  name            String  @db.VarChar(150)
+  description     String? @db.VarChar(255)
+  width           Int
+  height          Int
+  backgroundColor String  @default("#ffffff") @map("background_color") @db.VarChar(9)
+  backgroundImageUrl String? @map("background_image_url") @db.VarChar(500)
+  elements        Json    @default("[]")
+
+  createdById String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  generatedTickets GeneratedTicket[]
+
+  @@map("ticket_templates")
+}
+
+enum GeneratedTicketStatus {
+  ACTIVE
+  CANCELLED
+}
+
+// Instance effectivement générée/imprimée à partir d'un gabarit. `code` est
+// le code sécurisé (voir security/secure-code.util.ts, "Checksum Mode 4") ;
+// `dataSnapshot` fige les données injectées au moment du rendu (nom de
+// l'événement, place, acheteur...) pour qu'une réimpression ultérieure
+// reproduise EXACTEMENT le même billet même si l'événement a changé depuis.
+// `eventId` est en revanche un champ propre (pas seulement dans le JSON) :
+// le contrôle d'accès (module 6) doit pouvoir vérifier efficacement qu'un
+// billet scanné correspond bien à l'événement de la porte, sans parser le
+// snapshot. `status` porte la liste noire ("billet annulé").
+model GeneratedTicket {
+  id         String                @id @default(uuid()) @db.Uuid
+  templateId String                @map("template_id") @db.Uuid
+  eventId    String?               @map("event_id") @db.Uuid
+  code       String                @unique @db.VarChar(40)
+  checksum   String                @db.VarChar(10)
+  status     GeneratedTicketStatus @default(ACTIVE)
+
+  // Association à un badge/bracelet physique NFC/RFID (module 4.2) — simple
+  // référence ; l'écriture effective sur la puce est un geste matériel hors
+  // périmètre de cette API.
+  nfcTagId String? @unique @map("nfc_tag_id") @db.VarChar(100)
+
+  dataSnapshot Json
+
+  reprintCount     Int       @default(0) @map("reprint_count")
+  lastReprintedAt  DateTime? @map("last_reprinted_at")
+  lastReprintedBy  String?   @map("last_reprinted_by") @db.Uuid
+
+  cancelledAt DateTime? @map("cancelled_at")
+  cancelledBy String?   @map("cancelled_by") @db.Uuid
+
+  createdById String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  template TicketTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  @@index([templateId])
+  @@index([eventId])
+  @@map("generated_tickets")
+}

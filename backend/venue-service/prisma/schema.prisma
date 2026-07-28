@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SeatStatus {
+  AVAILABLE
+  // Réservé/quota VIP : bloqué pour la vente publique sans être vendu.
+  RESERVED
+  SOLD
+  // Hors-service structurel (siège cassé) — indépendant de tout événement.
+  OUT_OF_SERVICE
+}
+
+enum NumberingDirection {
+  LEFT_TO_RIGHT
+  RIGHT_TO_LEFT
+}
+
+// Pas de FK vers "users" : microservice avec sa propre base, la relation à
+// l'utilisateur créateur/auteur reste un simple UUID scalaire (audit),
+// résolu côté frontend via l'auth-service si besoin d'afficher un nom.
+
+model Venue {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(150)
+  city        String?  @db.VarChar(100)
+  address     String?  @db.VarChar(255)
+  createdById String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  gates  Gate[]
+  stands Stand[]
+
+  @@map("venues")
+}
+
+model Gate {
+  id          String   @id @default(uuid()) @db.Uuid
+  venueId     String   @map("venue_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  code        String?  @db.VarChar(30)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  venue      Venue            @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  zoneAccess GateZoneAccess[]
+
+  @@map("gates")
+}
+
+model Stand {
+  id         String   @id @default(uuid()) @db.Uuid
+  venueId    String   @map("venue_id") @db.Uuid
+  name       String   @db.VarChar(100)
+  orderIndex Int      @default(0) @map("order_index")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  venue Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  zones Zone[]
+
+  @@map("stands")
+}
+
+model Zone {
+  id         String   @id @default(uuid()) @db.Uuid
+  standId    String   @map("stand_id") @db.Uuid
+  name       String   @db.VarChar(100)
+  // Couleur d'affichage sur le plan 2D (ex: "#4F46E5").
+  colorHex   String?  @map("color_hex") @db.VarChar(9)
+  // Contour dessiné à la souris : tableau JSON de points [{x,y}, ...].
+  mapPolygon Json?    @map("map_polygon")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  stand      Stand            @relation(fields: [standId], references: [id], onDelete: Cascade)
+  rows       Row[]
+  gateAccess GateZoneAccess[]
+
+  @@map("zones")
+}
+
+// Une porte peut donner accès à plusieurs zones, une zone être accessible par
+// plusieurs portes — nécessaire pour le futur contrôle d'accès (module 6).
+model GateZoneAccess {
+  gateId String @map("gate_id") @db.Uuid
+  zoneId String @map("zone_id") @db.Uuid
+
+  gate Gate @relation(fields: [gateId], references: [id], onDelete: Cascade)
+  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@id([gateId, zoneId])
+  @@map("gate_zone_access")
+}
+
+model Row {
+  id                 String             @id @default(uuid()) @db.Uuid
+  zoneId             String             @map("zone_id") @db.Uuid
+  label              String             @db.VarChar(50)
+  orderIndex         Int                @default(0) @map("order_index")
+  // Sens retenu lors de la dernière génération automatique des numéros.
+  numberingDirection NumberingDirection @default(LEFT_TO_RIGHT) @map("numbering_direction")
+  createdAt          DateTime           @default(now()) @map("created_at")
+
+  zone  Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  seats Seat[]
+
+  @@map("rows")
+}
+
+model Seat {
+  id        String     @id @default(uuid()) @db.Uuid
+  rowId     String     @map("row_id") @db.Uuid
+  number    Int
+  label     String?    @db.VarChar(50)
+  // Position relative sur le plan 2D (dans le référentiel de la zone).
+  x         Float?
+  y         Float?
+  // Etat STRUCTUREL uniquement (siège cassé/indisponible physiquement).
+  // Réservé/Vendu sont des états PAR ÉVÉNEMENT, portés par le module 3.
+  status    SeatStatus @default(AVAILABLE)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  row Row @relation(fields: [rowId], references: [id], onDelete: Cascade)
+
+  @@unique([rowId, number])
+  @@map("seats")
+}

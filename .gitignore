@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+*.tsbuildinfo
+
+# Env files (secrets) — keep only the .env.example templates
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Secrets
+backend/auth-service/keys/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Misc
+coverage/
+.turbo/
