@@ -26,6 +26,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Claude Code session state (not project source)
+.claude/
+
 # Misc
 coverage/
 .turbo/
