@@ -134,81 +134,6 @@ const ROLES: Array<{ code: string; label: string; permissions: string[] }> = [
     permissions: PERMISSIONS.map((p) => p.code),
   },
   {
-    code: 'ADMIN',
-    label: 'Administrateur',
-    permissions: [
-      'users:create',
-      'users:read',
-      'users:update',
-      'roles:manage',
-      'sessions:read',
-      'sessions:revoke',
-      'partners:create',
-      'partners:read',
-      'partners:update',
-      'partners:delete',
-      'channels:read',
-      'channels:manage',
-      'channels:toggle',
-      'quotas:manage',
-      'venues:read',
-      'venues:create',
-      'venues:update',
-      'venues:delete',
-      'venues:seats:manage',
-      'events:read',
-      'events:create',
-      'events:update',
-      'events:delete',
-      'pricing:read',
-      'pricing:create',
-      'pricing:update',
-      'pricing:delete',
-      'subscriptions:read',
-      'subscriptions:create',
-      'subscriptions:update',
-      'subscriptions:delete',
-      'sales-quotas:read',
-      'sales-quotas:manage',
-      'sales-quotas:toggle',
-      'templates:read',
-      'templates:create',
-      'templates:update',
-      'templates:delete',
-      'tickets:read',
-      'tickets:create',
-      'tickets:reprint',
-      'tickets:cancel',
-      'orders:read',
-      'access:scan',
-      'access:override',
-      'reports:read',
-      'reports:export-crm',
-    ],
-  },
-  {
-    // Accès étendu (écriture ciblée) : structure hiérarchique + cartographie 2D/3D +
-    // état des sièges, mais pas de suppression (Portes/Tribunes/Bloc/Rang/Siège).
-    code: 'DIRECTEUR_STADE',
-    label: 'Directeur du Stade',
-    permissions: [
-      'venues:read',
-      'venues:create',
-      'venues:update',
-      'venues:seats:manage',
-      'channels:read',
-      'events:read',
-      'pricing:read',
-      'subscriptions:read',
-      'sales-quotas:read',
-      'templates:read',
-      'orders:read',
-      // Le tableau de bord live (module 7.1 — remplissage du stade, affluence
-      // aux portes) est son outil de pilotage jour de match.
-      'reports:read',
-    ],
-  },
-  {
     code: 'SUPERVISEUR',
     label: 'Superviseur Billetterie',
     permissions: [
@@ -224,16 +149,21 @@ const ROLES: Array<{ code: string; label: string; permissions: string[] }> = [
       'venues:seats:manage',
       'events:read',
       'pricing:read',
+      // Cartes RFID/NFC associées aux abonnés, émission de billets nominatifs
+      // exceptionnels ou d'invitations (module 3.3/5.2) — droit d'écriture complet.
       'subscriptions:read',
-      // Même principe que channels:toggle : peut bloquer/débloquer en
-      // urgence la vente d'une tribune/zone/catégorie, sans droit de
-      // configuration complet des jauges (pas de sales-quotas:manage).
+      'subscriptions:update',
+      // Gère et ajuste les jauges de vente par canal (pas seulement le
+      // kill-switch d'urgence channels:toggle/sales-quotas:toggle) : c'est
+      // son rôle métier de responsable des ventes.
       'sales-quotas:read',
+      'sales-quotas:manage',
       'sales-quotas:toggle',
       'templates:read',
       'tickets:read',
-      // Droit d'autoriser une réimpression (billet perdu/invitation) sans
-      // pouvoir générer de nouveaux billets soi-même (pas de tickets:create).
+      // Émet lui-même des billets nominatifs exceptionnels/invitations (pas
+      // seulement réimprimer un billet déjà généré par un caissier).
+      'tickets:create',
       'tickets:reprint',
       // Même logique : peut mettre un billet en liste noire (perdu/volé/
       // litige) sans avoir le droit d'en générer de nouveaux.
@@ -243,31 +173,6 @@ const ROLES: Array<{ code: string; label: string; permissions: string[] }> = [
       // forcer une entrée en cas de litige à la porte.
       'access:scan',
       'access:override',
-      'reports:read',
-    ],
-  },
-  {
-    code: 'OPERATEUR',
-    // events:read/pricing:read/subscriptions:read/sales-quotas:read : doit
-    // savoir pour quel événement, à quel tarif, pour quel abonné et si la
-    // vente est bloquée quand il encaisse (module 5). tickets:create : émet
-    // le billet imprimé au guichet à partir d'un gabarit (module 4).
-    // venues:seats:manage : la vente marque elle-même le siège comme Vendu.
-    label: 'Opérateur',
-    permissions: [
-      'pos:sell',
-      'orders:read',
-      'venues:read',
-      'venues:seats:manage',
-      // Nécessaire pour choisir un canal de vente à l'encaissement (module 5).
-      'channels:read',
-      'events:read',
-      'pricing:read',
-      'subscriptions:read',
-      'sales-quotas:read',
-      'templates:read',
-      'tickets:read',
-      'tickets:create',
       'reports:read',
     ],
   },
