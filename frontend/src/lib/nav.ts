@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, ShieldCheck, MonitorSmartphone, Handshake, Landmark, CalendarDays, Tags, Ticket, LayoutTemplate, ShoppingCart, Receipt, ScanLine, Radio } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldCheck, MonitorSmartphone, Handshake, Landmark, CalendarDays, Tags, Ticket, LayoutTemplate, ShoppingCart, Receipt, ScanLine, Radio, BarChart3 } from 'lucide-react';
 
 export interface NavItem {
   href: string;
@@ -23,4 +23,5 @@ export const navItems: NavItem[] = [
   { href: '/dashboard/pos', label: 'Vente rapide', icon: ShoppingCart, requiredPermission: 'pos:sell' },
   { href: '/dashboard/orders', label: 'Historique des ventes', icon: Receipt, requiredPermission: 'orders:read' },
   { href: '/dashboard/access', label: 'Contrôle d’accès', icon: ScanLine, requiredPermission: 'access:scan' },
+  { href: '/dashboard/reports', label: 'Rapports', icon: BarChart3, requiredPermission: 'reports:read' },
 ];

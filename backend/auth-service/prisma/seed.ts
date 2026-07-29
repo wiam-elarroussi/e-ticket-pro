@@ -119,6 +119,12 @@ const PERMISSIONS: Array<{ code: string; module: string; description: string }> 
   { code: 'access:scan', module: 'ACCESS', description: "Scanner un billet ou un abonnement à une porte" },
   { code: 'access:override', module: 'ACCESS', description: "Forcer une validation d'accès" },
   { code: 'reports:read', module: 'REPORTING', description: 'Consulter les rapports et statistiques' },
+  {
+    code: 'reports:export-crm',
+    module: 'REPORTING',
+    description:
+      "Exporter les contacts acheteurs/abonnés (nom/email/téléphone) à des fins marketing — droit distinct de reports:read car il s'agit de données personnelles exploitables commercialement",
+  },
 ];
 
 const ROLES: Array<{ code: string; label: string; permissions: string[] }> = [
@@ -177,6 +183,7 @@ const ROLES: Array<{ code: string; label: string; permissions: string[] }> = [
       'access:scan',
       'access:override',
       'reports:read',
+      'reports:export-crm',
     ],
   },
   {
@@ -196,6 +203,9 @@ const ROLES: Array<{ code: string; label: string; permissions: string[] }> = [
       'sales-quotas:read',
       'templates:read',
       'orders:read',
+      // Le tableau de bord live (module 7.1 — remplissage du stade, affluence
+      // aux portes) est son outil de pilotage jour de match.
+      'reports:read',
     ],
   },
   {

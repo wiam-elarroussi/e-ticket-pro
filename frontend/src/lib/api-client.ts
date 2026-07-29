@@ -6,6 +6,7 @@ export const EVENTS_API_URL = process.env.NEXT_PUBLIC_EVENTS_API_URL ?? 'http://
 export const TICKETS_API_URL = process.env.NEXT_PUBLIC_TICKETS_API_URL ?? 'http://localhost:3005';
 export const POS_API_URL = process.env.NEXT_PUBLIC_POS_API_URL ?? 'http://localhost:3006';
 export const ACCESS_API_URL = process.env.NEXT_PUBLIC_ACCESS_API_URL ?? 'http://localhost:3007';
+export const REPORTS_API_URL = process.env.NEXT_PUBLIC_REPORTS_API_URL ?? 'http://localhost:3008';
 
 export class ApiError extends Error {
   status: number;
@@ -105,4 +106,43 @@ export async function apiFetch<T = unknown>(path: string, options: ApiFetchOptio
   }
 
   return data as T;
+}
+
+/** Télécharge un fichier (export CSV/XLSX/PDF/XML) protégé par le Bearer token, et déclenche le
+ * téléchargement navigateur — un simple <a href> ne peut pas porter l'en-tête Authorization. */
+export async function downloadFile(path: string, baseUrl: string): Promise<void> {
+  const { accessToken } = useAuthStore.getState();
+  let response = await fetch(`${baseUrl}${path}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+
+  if (response.status === 401) {
+    const newToken = await refreshTokens();
+    if (newToken) {
+      response = await fetch(`${baseUrl}${path}`, { headers: { Authorization: `Bearer ${newToken}` } });
+    }
+  }
+
+  if (!response.ok) {
+    let message = response.statusText;
+    try {
+      const data = await response.json();
+      message = Array.isArray(data?.message) ? data.message.join(', ') : (data?.message ?? message);
+    } catch {
+      // corps non-JSON, on garde le statusText
+    }
+    throw new ApiError(response.status, message);
+  }
+
+  const disposition = response.headers.get('content-disposition') ?? '';
+  const match = disposition.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? 'export';
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
