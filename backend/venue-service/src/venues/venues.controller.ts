@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGu
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { VenuesService } from './venues.service';
 import { CreateVenueDto } from './dto/create-venue.dto';
@@ -25,7 +26,8 @@ export class VenuesController {
     return this.venuesService.findById(id);
   }
 
-  @RequirePermissions('venues:read')
+  /** Plan complet d'une enceinte — lecture publique consommée par E-Ticket-Pay (plan 2D, choix de siège). */
+  @Public()
   @Get(':id/full')
   findFullTree(@Param('id', ParseUUIDPipe) id: string) {
     return this.venuesService.findFullTree(id);

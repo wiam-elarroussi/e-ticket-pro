@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, 
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { SubscriptionFormulasService } from './subscription-formulas.service';
 import { CreateSubscriptionFormulaDto } from './dto/create-subscription-formula.dto';
 import { UpdateSubscriptionFormulaDto } from './dto/update-subscription-formula.dto';
@@ -16,6 +17,13 @@ export class SubscriptionFormulasController {
   @Get()
   findAll(@Query('venueId') venueId?: string) {
     return this.subscriptionFormulasService.findAll(venueId);
+  }
+
+  /** Catalogue public (E-Ticket-Pay) — doit précéder ':id'. */
+  @Public()
+  @Get('public')
+  findAllPublic(@Query('venueId') venueId?: string) {
+    return this.subscriptionFormulasService.findAllPublic(venueId);
   }
 
   @RequirePermissions('subscriptions:read')

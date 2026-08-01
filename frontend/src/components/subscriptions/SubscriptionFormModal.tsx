@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { useCreateSubscription, useUpdateSubscription } from '@/hooks/useSubscriptions';
 import { useVenueFullTree } from '@/hooks/useVenues';
 import { Subscription } from '@/lib/subscription-types';
+import { useI18nStore } from '@/store/i18n-store';
 
 const schema = z.object({
   holderName: z.string().min(1).max(150),
@@ -39,6 +40,7 @@ export function SubscriptionFormModal({ open, onClose, formulaId, venueId, subsc
   const createSubscription = useCreateSubscription();
   const updateSubscription = useUpdateSubscription();
   const { data: venue } = useVenueFullTree(venueId);
+  const t = useI18nStore((s) => s.t);
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
   const standId = form.watch('standId');
@@ -109,27 +111,27 @@ export function SubscriptionFormModal({ open, onClose, formulaId, venueId, subsc
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Modifier l’abonnement' : 'Nouvelle carte abonné'}>
+    <Modal open={open} onClose={onClose} title={isEdit ? t('subscriptions.form.edit_subscription') : t('subscriptions.form.new_subscription_card')}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         {isEdit && subscription && (
-          <Input label="ID Abonnement" value={subscription.id} disabled readOnly className="font-mono text-xs" />
+          <Input label={t('subscriptions.form.subscription_id')} value={subscription.id} disabled readOnly className="font-mono text-xs" />
         )}
 
-        <Input label="Nom du titulaire" error={form.formState.errors.holderName?.message} {...form.register('holderName')} />
+        <Input label={t('subscriptions.form.holder_name')} error={form.formState.errors.holderName?.message} {...form.register('holderName')} />
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Email" error={form.formState.errors.holderEmail?.message} {...form.register('holderEmail')} />
-          <Input label="Téléphone" error={form.formState.errors.holderPhone?.message} {...form.register('holderPhone')} />
+          <Input label={t('ui.email')} error={form.formState.errors.holderEmail?.message} {...form.register('holderEmail')} />
+          <Input label={t('subscriptions.form.holder_phone')} error={form.formState.errors.holderPhone?.message} {...form.register('holderPhone')} />
         </div>
 
         <Input
-          label="Identifiant NFC/RFID (UID) (optionnel)"
-          placeholder="Scanner la carte avec le lecteur USB au guichet"
+          label={t('subscriptions.form.nfc_id')}
+          placeholder={t('subscriptions.form.nfc_placeholder')}
           error={form.formState.errors.nfcTagId?.message}
           {...form.register('nfcTagId')}
         />
 
         <div>
-          <p className="mb-1.5 text-sm font-medium text-slate-700">Siège nominatif (optionnel)</p>
+          <p className="mb-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">{t('subscriptions.form.nominative_seat')}</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Select
               value={standId}
@@ -141,7 +143,7 @@ export function SubscriptionFormModal({ open, onClose, formulaId, venueId, subsc
                 form.setValue('seatId', '');
               }}
             >
-              <option value="">Tribune…</option>
+              <option value="">{t('subscriptions.form.stand_placeholder')}</option>
               {stands.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -157,7 +159,7 @@ export function SubscriptionFormModal({ open, onClose, formulaId, venueId, subsc
                 form.setValue('seatId', '');
               }}
             >
-              <option value="">Zone…</option>
+              <option value="">{t('subscriptions.form.zone_placeholder')}</option>
               {zones.map((z) => (
                 <option key={z.id} value={z.id}>
                   {z.name}
@@ -172,7 +174,7 @@ export function SubscriptionFormModal({ open, onClose, formulaId, venueId, subsc
                 form.setValue('seatId', '');
               }}
             >
-              <option value="">Rang…</option>
+              <option value="">{t('subscriptions.form.row_placeholder')}</option>
               {rows.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.label}
@@ -180,17 +182,17 @@ export function SubscriptionFormModal({ open, onClose, formulaId, venueId, subsc
               ))}
             </Select>
             <Select value={form.watch('seatId')} disabled={!rowId} {...form.register('seatId')}>
-              <option value="">Siège…</option>
+              <option value="">{t('subscriptions.form.seat_placeholder')}</option>
               {seats.map((seat) => (
                 <option key={seat.id} value={seat.id}>
-                  {seat.label ?? `Siège ${seat.number}`}
+                  {seat.label ?? `${t('subscriptions.form.seat_label')} ${seat.number}`}
                 </option>
               ))}
             </Select>
           </div>
           {form.watch('seatId') && (
             <p className="mt-1 text-xs text-slate-400">
-              Sélection actuelle :{' '}
+              {t('subscriptions.form.current_selection')}{' '}
               {stands.find((s) => s.id === standId)?.name} · {zones.find((z) => z.id === zoneId)?.name} ·{' '}
               {rows.find((r) => r.id === rowId)?.label} ·{' '}
               {seats.find((seat) => seat.id === form.watch('seatId'))?.label ?? ''}
@@ -199,18 +201,18 @@ export function SubscriptionFormModal({ open, onClose, formulaId, venueId, subsc
         </div>
 
         {isEdit && (
-          <Select label="Statut" error={form.formState.errors.status?.message} {...form.register('status')}>
-            <option value="ACTIVE">Actif</option>
-            <option value="SUSPENDED">Suspendu</option>
-            <option value="CANCELLED">Résilié</option>
+          <Select label={t('ui.status')} error={form.formState.errors.status?.message} {...form.register('status')}>
+            <option value="ACTIVE">{t('ui.active')}</option>
+            <option value="SUSPENDED">{t('subscriptions.form.status_suspended')}</option>
+            <option value="CANCELLED">{t('subscriptions.form.status_cancelled')}</option>
           </Select>
         )}
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
           <Button type="submit" isLoading={isPending}>
-            {isEdit ? 'Enregistrer' : 'Créer'}
+            {isEdit ? t('ui.save') : t('ui.create')}
           </Button>
         </div>
       </form>

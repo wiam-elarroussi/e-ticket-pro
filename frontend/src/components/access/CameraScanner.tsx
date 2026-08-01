@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import jsQR from 'jsqr';
 import { Camera, CameraOff, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useI18nStore } from '@/store/i18n-store';
 
 interface CameraScannerProps {
   /** Appelé à chaque QR code détecté et décodé. Le composant se met en pause 2s après un envoi
@@ -23,6 +24,7 @@ export function CameraScanner({ onDetected, disabled }: CameraScannerProps) {
 
   const [active, setActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useI18nStore((s) => s.t);
 
   const stop = () => {
     if (frameRef.current) cancelAnimationFrame(frameRef.current);
@@ -64,7 +66,7 @@ export function CameraScanner({ onDetected, disabled }: CameraScannerProps) {
       setActive(true);
       frameRef.current = requestAnimationFrame(tick);
     } catch {
-      setError("Impossible d'accéder à la caméra (permission refusée ou aucun périphérique disponible).");
+      setError(t('access.camera.error'));
     }
   };
 
@@ -73,7 +75,7 @@ export function CameraScanner({ onDetected, disabled }: CameraScannerProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-700">Scan par caméra</p>
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('access.camera.scan_label')}</p>
         <Button
           type="button"
           variant={active ? 'secondary' : 'primary'}
@@ -81,12 +83,12 @@ export function CameraScanner({ onDetected, disabled }: CameraScannerProps) {
           onClick={() => (active ? stop() : start())}
         >
           {active ? <CameraOff className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
-          {active ? 'Désactiver la caméra' : 'Activer la caméra'}
+          {active ? t('access.camera.disable') : t('access.camera.enable')}
         </Button>
       </div>
 
       {error && (
-        <p className="flex items-center gap-1.5 text-xs text-red-600">
+        <p className="flex items-center gap-1.5 text-xs text-carmin-600">
           <AlertTriangle className="h-3.5 w-3.5" />
           {error}
         </p>

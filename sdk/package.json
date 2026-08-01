@@ -1,0 +1,14 @@
+{
+  "name": "@eticketpro/sdk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SDK TypeScript officiel pour l'intégration tierce (Ticketmaster, FIFA Ticketing, partenaires billetterie) avec l'écosystème E-Ticket Pro — cf. attestation de conformité, Appel d'Offres 02/2026/GSC, §1 'Fourniture d'API et SDK'.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

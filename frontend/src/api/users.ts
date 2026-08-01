@@ -27,6 +27,7 @@ export interface UpdateUserPayload {
   fullName?: string;
   roleId?: string;
   isActive?: boolean;
+  password?: string;
 }
 
 export function updateUser(id: string, payload: UpdateUserPayload) {

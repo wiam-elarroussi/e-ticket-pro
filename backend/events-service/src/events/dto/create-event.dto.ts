@@ -56,4 +56,10 @@ export class CreateEventDto {
   @IsInt()
   @Min(1)
   maxPerOrder?: number;
+
+  /** Chemin renvoyé par POST /events/upload-image — cf. schema.prisma#Event.imageUrl. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imageUrl?: string;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,31 +10,30 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useRoles } from '@/hooks/useRoles';
 import { useCreateUser, useUpdateUser } from '@/hooks/useUsers';
+import { useI18nStore, TranslationKey } from '@/store/i18n-store';
+import { translateRoleLabel } from '@/lib/roles';
 import { User } from '@/lib/types';
 
 const USERNAME_RULE = /^[a-zA-Z0-9._-]+$/;
 const PASSWORD_RULE = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/;
 
-// Schéma unique (plutôt que deux schémas branchés create/edit) : évite un
-// conflit de type react-hook-form/zod entre schémas hétérogènes. Le mot de
-// passe est optionnel dans le schéma mais requis manuellement en création
-// (le champ n'est de toute façon rendu que dans ce cas).
-const schema = z.object({
-  username: z.string().min(3).max(50).regex(USERNAME_RULE, 'Lettres, chiffres, points, tirets, underscores'),
-  email: z.string().email(),
-  fullName: z.string().min(2).max(150),
-  roleId: z.string().uuid('Sélectionnez un rôle'),
-  password: z
-    .string()
-    .min(12, 'Minimum 12 caractères')
-    .max(128)
-    .regex(PASSWORD_RULE, 'Majuscule, minuscule, chiffre et caractère spécial requis')
-    .optional()
-    .or(z.literal('')),
-  isActive: z.boolean().optional(),
-});
+const buildSchema = (t: (key: TranslationKey) => string) =>
+  z.object({
+    username: z.string().min(3).max(50).regex(USERNAME_RULE, t('users.form.username_invalid')),
+    email: z.string().email(),
+    fullName: z.string().min(2).max(150),
+    roleId: z.string().uuid(t('users.form.select_role')),
+    password: z
+      .string()
+      .min(12, t('users.form.password_min'))
+      .max(128)
+      .regex(PASSWORD_RULE, t('users.form.password_complexity'))
+      .optional()
+      .or(z.literal('')),
+    isActive: z.boolean().optional(),
+  });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 interface UserFormModalProps {
   open: boolean;
@@ -47,6 +46,8 @@ export function UserFormModal({ open, onClose, user }: UserFormModalProps) {
   const { data: roles } = useRoles();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
+  const { lang, t } = useI18nStore();
+  const schema = useMemo(() => buildSchema(t), [t]);
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -84,7 +85,7 @@ export function UserFormModal({ open, onClose, user }: UserFormModalProps) {
       });
     } else {
       if (!values.password) {
-        form.setError('password', { message: 'Mot de passe requis' });
+        form.setError('password', { message: t('users.form.password_required') });
         return;
       }
       await createUser.mutateAsync({
@@ -99,42 +100,64 @@ export function UserFormModal({ open, onClose, user }: UserFormModalProps) {
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Modifier l’utilisateur' : 'Nouvel utilisateur'}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEdit ? t('users.form.edit_user') : t('users.form.new_user')}
+    >
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Input label="Identifiant" error={form.formState.errors.username?.message} {...form.register('username')} />
-        <Input label="Email" type="email" error={form.formState.errors.email?.message} {...form.register('email')} />
-        <Input label="Nom complet" error={form.formState.errors.fullName?.message} {...form.register('fullName')} />
-        <Select label="Rôle" error={form.formState.errors.roleId?.message} {...form.register('roleId')}>
-          <option value="">Sélectionner…</option>
+        <Input
+          label={t('users.form.username')}
+          error={form.formState.errors.username?.message}
+          {...form.register('username')}
+        />
+        <Input
+          label={t('ui.email')}
+          type="email"
+          error={form.formState.errors.email?.message}
+          {...form.register('email')}
+        />
+        <Input
+          label={t('users.form.full_name')}
+          error={form.formState.errors.fullName?.message}
+          {...form.register('fullName')}
+        />
+        <Select
+          label={t('users.form.role')}
+          error={form.formState.errors.roleId?.message}
+          {...form.register('roleId')}
+        >
+          <option value="">{t('users.form.select_role_placeholder')}</option>
           {roles?.map((role) => (
             <option key={role.id} value={role.id}>
-              {role.label}
+              {translateRoleLabel(role.label, lang)}
             </option>
           ))}
         </Select>
         {!isEdit && (
           <Input
-            label="Mot de passe initial"
+            label={t('users.form.initial_password')}
             type="password"
             error={form.formState.errors.password?.message}
             {...form.register('password')}
           />
         )}
         {isEdit && (
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" className="rounded border-slate-300" {...form.register('isActive')} />
-            Compte actif
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <input type="checkbox" className="rounded border-slate-300 dark:border-slate-700 text-[#00875A]" {...form.register('isActive')} />
+            <span>{t('users.form.active_account')}</span>
           </label>
         )}
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
-          <Button type="submit" isLoading={isPending}>
-            {isEdit ? 'Enregistrer' : 'Créer'}
+          <Button type="submit" isLoading={isPending} className="bg-[#00875A] text-white hover:bg-[#00754e]">
+            {isEdit ? t('ui.save') : t('ui.create')}
           </Button>
         </div>
       </form>
     </Modal>
   );
 }
+

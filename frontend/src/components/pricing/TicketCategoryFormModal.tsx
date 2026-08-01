@@ -1,27 +1,33 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useCreateTicketCategory, useUpdateTicketCategory } from '@/hooks/useTicketCategories';
-import { TicketCategory } from '@/lib/pricing-types';
+import { AccreditationType, TicketCategory } from '@/lib/pricing-types';
+import { useI18nStore, TranslationKey } from '@/store/i18n-store';
 
-const schema = z.object({
-  code: z
-    .string()
-    .min(1)
-    .max(30)
-    .regex(/^[A-Z0-9_]+$/, 'Majuscules, chiffres et underscores uniquement (ex: PLEIN_TARIF)'),
-  name: z.string().min(1).max(100),
-  isFree: z.boolean(),
-  requiresNominativeInfo: z.boolean(),
-});
+const ACCREDITATION_TYPES: AccreditationType[] = ['PUBLIC', 'VIP', 'PRESS', 'DELEGATION', 'STAFF'];
 
-type FormValues = z.infer<typeof schema>;
+const buildSchema = (t: (key: TranslationKey) => string) =>
+  z.object({
+    code: z
+      .string()
+      .min(1)
+      .max(30)
+      .regex(/^[A-Z0-9_]+$/, t('pricing.form.code_invalid')),
+    name: z.string().min(1).max(100),
+    isFree: z.boolean(),
+    requiresNominativeInfo: z.boolean(),
+    accreditationType: z.enum(['PUBLIC', 'VIP', 'PRESS', 'DELEGATION', 'STAFF']),
+  });
+
+type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 interface TicketCategoryFormModalProps {
   open: boolean;
@@ -33,6 +39,8 @@ export function TicketCategoryFormModal({ open, onClose, category }: TicketCateg
   const isEdit = !!category;
   const createCategory = useCreateTicketCategory();
   const updateCategory = useUpdateTicketCategory();
+  const t = useI18nStore((s) => s.t);
+  const schema = useMemo(() => buildSchema(t), [t]);
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -43,6 +51,7 @@ export function TicketCategoryFormModal({ open, onClose, category }: TicketCateg
         name: category?.name ?? '',
         isFree: category?.isFree ?? false,
         requiresNominativeInfo: category?.requiresNominativeInfo ?? false,
+        accreditationType: category?.accreditationType ?? 'PUBLIC',
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -54,7 +63,12 @@ export function TicketCategoryFormModal({ open, onClose, category }: TicketCateg
     if (isEdit && category) {
       await updateCategory.mutateAsync({
         id: category.id,
-        payload: { name: values.name, isFree: values.isFree, requiresNominativeInfo: values.requiresNominativeInfo },
+        payload: {
+          name: values.name,
+          isFree: values.isFree,
+          requiresNominativeInfo: values.requiresNominativeInfo,
+          accreditationType: values.accreditationType,
+        },
       });
     } else {
       await createCategory.mutateAsync(values);
@@ -63,31 +77,38 @@ export function TicketCategoryFormModal({ open, onClose, category }: TicketCateg
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Modifier la catégorie' : 'Nouvelle catégorie de billet'}>
+    <Modal open={open} onClose={onClose} title={isEdit ? t('pricing.form.edit_category') : t('pricing.form.new_category')}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <Input
           label="Code"
-          placeholder="EX: PLEIN_TARIF"
+          placeholder={t('pricing.form.code_placeholder')}
           disabled={isEdit}
           error={form.formState.errors.code?.message}
           {...form.register('code')}
           onChange={(e) => form.setValue('code', e.target.value.toUpperCase())}
         />
-        <Input label="Nom affiché" error={form.formState.errors.name?.message} {...form.register('name')} />
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" className="rounded border-slate-300" {...form.register('isFree')} />
-          Catégorie gratuite (invitation, presse, staff…)
+        <Input label={t('pricing.form.display_name')} error={form.formState.errors.name?.message} {...form.register('name')} />
+        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+          <input type="checkbox" className="rounded border-slate-300 dark:border-slate-700" {...form.register('isFree')} />
+          {t('pricing.form.free_category')}
         </label>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" className="rounded border-slate-300" {...form.register('requiresNominativeInfo')} />
-          Billet nominatif (saisie acheteur obligatoire à la vente)
+        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+          <input type="checkbox" className="rounded border-slate-300 dark:border-slate-700" {...form.register('requiresNominativeInfo')} />
+          {t('pricing.form.nominative_ticket')}
         </label>
+        <Select label={t('pricing.form.accreditation_type')} {...form.register('accreditationType')}>
+          {ACCREDITATION_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {t(`pricing.accreditation.${type.toLowerCase()}` as TranslationKey)}
+            </option>
+          ))}
+        </Select>
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
           <Button type="submit" isLoading={isPending}>
-            {isEdit ? 'Enregistrer' : 'Créer'}
+            {isEdit ? t('ui.save') : t('ui.create')}
           </Button>
         </div>
       </form>

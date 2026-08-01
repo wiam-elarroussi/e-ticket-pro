@@ -1,10 +1,10 @@
 import { useAuthStore } from '@/store/auth-store';
 
 const AUTH_API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+export const EVENTS_API_URL = process.env.NEXT_PUBLIC_EVENTS_API_URL ?? 'http://localhost:3002';
 export const VENUE_API_URL = process.env.NEXT_PUBLIC_VENUE_API_URL ?? 'http://localhost:3003';
-export const EVENTS_API_URL = process.env.NEXT_PUBLIC_EVENTS_API_URL ?? 'http://localhost:3004';
+export const POS_API_URL = process.env.NEXT_PUBLIC_POS_API_URL ?? 'http://localhost:3004';
 export const TICKETS_API_URL = process.env.NEXT_PUBLIC_TICKETS_API_URL ?? 'http://localhost:3005';
-export const POS_API_URL = process.env.NEXT_PUBLIC_POS_API_URL ?? 'http://localhost:3006';
 export const ACCESS_API_URL = process.env.NEXT_PUBLIC_ACCESS_API_URL ?? 'http://localhost:3007';
 export const REPORTS_API_URL = process.env.NEXT_PUBLIC_REPORTS_API_URL ?? 'http://localhost:3008';
 
@@ -145,4 +145,33 @@ export async function downloadFile(path: string, baseUrl: string): Promise<void>
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+/** Envoi d'un fichier (multipart/form-data) — pas de Content-Type manuel : le
+ * navigateur pose lui-même la boundary multipart, contrairement à apiFetch. */
+export async function uploadFile<T = unknown>(path: string, baseUrl: string, file: File): Promise<T> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const doUpload = () => {
+    const { accessToken } = useAuthStore.getState();
+    return fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: formData,
+    });
+  };
+
+  let response = await doUpload();
+  if (response.status === 401) {
+    const newToken = await refreshTokens();
+    if (newToken) response = await doUpload();
+  }
+
+  const data = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    const message = Array.isArray(data?.message) ? data.message.join(', ') : (data?.message as string | undefined) ?? response.statusText;
+    throw new ApiError(response.status, message);
+  }
+  return data as T;
 }

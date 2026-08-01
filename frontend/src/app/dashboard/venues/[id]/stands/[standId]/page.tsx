@@ -8,6 +8,7 @@ import { useStand } from '@/hooks/useStands';
 import { useGates } from '@/hooks/useGates';
 import { useDeleteZone, useZones } from '@/hooks/useZones';
 import { useAuthStore } from '@/store/auth-store';
+import { useI18nStore } from '@/store/i18n-store';
 import { ApiError } from '@/lib/api-client';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -36,6 +37,7 @@ function StandDetailPageContent() {
   const { data: zones, isLoading: zonesLoading } = useZones(standId);
   const deleteZone = useDeleteZone();
   const hasPermission = useAuthStore((s) => s.hasPermission);
+  const t = useI18nStore((s) => s.t);
 
   const [zoneModalOpen, setZoneModalOpen] = useState(false);
   const [gateAccessFor, setGateAccessFor] = useState<Zone | null>(null);
@@ -58,38 +60,38 @@ function StandDetailPageContent() {
       <EmptyState
         message={
           error instanceof ApiError
-            ? `Impossible de charger cette tribune : ${error.message}`
-            : 'Impossible de charger cette tribune. Réessayez plus tard.'
+            ? `${t('venues.stand.error_loading')} : ${error.message}`
+            : t('venues.stand.error_loading_generic')
         }
       />
     );
   }
 
   if (!stand) {
-    return <EmptyState message="Tribune introuvable." />;
+    return <EmptyState message={t('venues.stand.not_found')} />;
   }
 
   return (
     <div>
       <Link
         href={`/dashboard/venues/${venueId}`}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"
+        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
       >
         <ArrowLeft className="h-4 w-4" />
-        Retour à l’enceinte
+        {t('venues.stand.back_to_venue')}
       </Link>
 
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-900">{stand.name}</h1>
-        <p className="text-sm text-slate-500">Zones et secteurs de cette tribune.</p>
+        <h1 className="text-xl font-semibold text-slate-900 dark:text-white">{stand.name}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('venues.stand.zones_subtitle')}</p>
       </div>
 
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-medium text-slate-900">Zones</h2>
+        <h2 className="font-medium text-slate-900 dark:text-white">{t('venues.stand.zones_title')}</h2>
         {canCreate && (
           <Button onClick={() => setZoneModalOpen(true)}>
             <Plus className="h-4 w-4" />
-            Nouvelle zone
+            {t('venues.stand.new_zone_button')}
           </Button>
         )}
       </div>
@@ -97,11 +99,11 @@ function StandDetailPageContent() {
       {zonesLoading ? (
         <Spinner className="h-5 w-5 text-indigo-600" />
       ) : !zones?.length ? (
-        <EmptyState message="Aucune zone pour cette tribune." />
+        <EmptyState message={t('venues.stand.no_zones')} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {zones.map((zone) => (
-            <div key={zone.id} className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <div key={zone.id} className="rounded-xl bg-white dark:bg-slate-900 p-5 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700">
               <div className="mb-2 flex items-center gap-2">
                 <span
                   className="h-3 w-3 shrink-0 rounded-full"
@@ -115,24 +117,24 @@ function StandDetailPageContent() {
                   {zone.name}
                 </Link>
               </div>
-              <p className="text-xs text-slate-400">{zone._count?.rows ?? 0} rang(s)</p>
+              <p className="text-xs text-slate-400">{zone._count?.rows ?? 0} {t('venues.stand.row_count')}</p>
               <div className="mt-2 flex items-center gap-1.5">
                 <DoorOpen className="h-3.5 w-3.5 text-slate-400" />
                 {zone.gateAccess?.length ? (
-                  <Badge tone="slate">{zone.gateAccess.length} porte(s) reliée(s)</Badge>
+                  <Badge tone="slate">{zone.gateAccess.length} {t('venues.stand.gates_linked')}</Badge>
                 ) : (
-                  <Badge tone="amber">Aucune porte reliée</Badge>
+                  <Badge tone="amber">{t('venues.stand.no_gate_linked')}</Badge>
                 )}
               </div>
               {(canUpdate || canDelete) && (
-                <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-2">
+                <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 dark:border-slate-800 pt-2">
                   {canUpdate && (
-                    <Button variant="ghost" onClick={() => setGateAccessFor(zone)} title="Portes d'accès">
+                    <Button variant="ghost" onClick={() => setGateAccessFor(zone)} title={t('venues.stand.access_gates_title')}>
                       <DoorOpen className="h-4 w-4" />
                     </Button>
                   )}
                   {canDelete && (
-                    <Button variant="ghost" onClick={() => setZoneToDelete(zone)} title="Supprimer">
+                    <Button variant="ghost" onClick={() => setZoneToDelete(zone)} title={t('ui.delete')}>
                       <Trash2 className="h-4 w-4 text-red-600" />
                     </Button>
                   )}
@@ -154,9 +156,9 @@ function StandDetailPageContent() {
 
       <ConfirmDialog
         open={!!zoneToDelete}
-        title="Supprimer cette zone ?"
-        description={`"${zoneToDelete?.name}" et tous ses rangs/sièges seront supprimés définitivement.`}
-        confirmLabel="Supprimer"
+        title={t('venues.stand.confirm_delete_title')}
+        description={`"${zoneToDelete?.name}" ${t('venues.stand.confirm_delete_desc_suffix')}`}
+        confirmLabel={t('ui.delete')}
         isLoading={deleteZone.isPending}
         onClose={() => setZoneToDelete(null)}
         onConfirm={() => {

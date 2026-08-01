@@ -1,9 +1,14 @@
 import { apiFetch, VENUE_API_URL } from '@/lib/api-client';
-import { Gate } from '@/lib/venue-types';
+import { Gate, GateDeviceStatus } from '@/lib/venue-types';
 
 export function fetchGates(venueId?: string) {
   const qs = venueId ? `?venueId=${venueId}` : '';
   return apiFetch<Gate[]>(`/gates${qs}`, { baseUrl: VENUE_API_URL });
+}
+
+/** Battement de vie du poste de contrôle (module 6, monitoring des obstacles physiques). */
+export function sendGateHeartbeat(gateId: string, status: GateDeviceStatus) {
+  return apiFetch<Gate>(`/gates/${gateId}/heartbeat`, { method: 'POST', json: { status }, baseUrl: VENUE_API_URL });
 }
 
 export interface GatePayload {

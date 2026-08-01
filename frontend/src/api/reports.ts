@@ -25,7 +25,7 @@ export function downloadAccessLogsExport(eventId: string, format: ExportFormat) 
   return downloadFile(`/reports/export/access-logs/${eventId}?format=${format}`, REPORTS_API_URL);
 }
 
-export function downloadCrmExport(format: 'csv' | 'xlsx', eventId?: string) {
+export function downloadCrmExport(format: 'csv' | 'xlsx' | 'docx', eventId?: string) {
   const params = new URLSearchParams({ format, ...(eventId ? { eventId } : {}) });
   return downloadFile(`/reports/export/crm?${params}`, REPORTS_API_URL);
 }

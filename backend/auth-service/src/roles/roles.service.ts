@@ -71,18 +71,25 @@ export class RolesService {
   async remove(id: string) {
     const role = await this.prisma.role.findUnique({
       where: { id },
-      include: { _count: { select: { users: true } } },
+      include: { users: true },
     });
     if (!role) {
       throw new NotFoundException('Rôle introuvable');
     }
-    if (role.isSystem) {
-      throw new ForbiddenException('Les rôles système ne peuvent pas être supprimés');
-    }
-    if (role._count.users > 0) {
-      throw new ConflictException('Impossible de supprimer un rôle encore assigné à des utilisateurs');
+
+    if (role.users.length > 0) {
+      const fallbackRole = await this.prisma.role.findFirst({
+        where: { code: { in: ['CAISSIER', 'SUPERVISEUR', 'SUPER_ADMIN'] }, id: { not: id } },
+      });
+      if (fallbackRole) {
+        await this.prisma.user.updateMany({
+          where: { roleId: id },
+          data: { roleId: fallbackRole.id },
+        });
+      }
     }
 
+    await this.prisma.rolePermission.deleteMany({ where: { roleId: id } });
     await this.prisma.role.delete({ where: { id } });
     return { success: true };
   }

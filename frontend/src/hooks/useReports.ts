@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import * as reportsApi from '@/api/reports';
 import { ApiError } from '@/lib/api-client';
 import { ExportFormat } from '@/lib/report-types';
+import { useI18nStore } from '@/store/i18n-store';
 
 function errorMessage(err: unknown, fallback: string) {
   return err instanceof ApiError ? err.message : fallback;
@@ -36,25 +37,28 @@ export function useChannelBreakdown(eventId?: string) {
 }
 
 export function useDownloadOrdersExport() {
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: ({ format, eventId }: { format: ExportFormat; eventId?: string }) =>
       reportsApi.downloadOrdersExport(format, eventId),
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de l’export')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.report.export_error'))),
   });
 }
 
 export function useDownloadAccessLogsExport() {
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: ({ eventId, format }: { eventId: string; format: ExportFormat }) =>
       reportsApi.downloadAccessLogsExport(eventId, format),
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de l’export')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.report.export_error'))),
   });
 }
 
 export function useDownloadCrmExport() {
+  const t = useI18nStore((s) => s.t);
   return useMutation({
-    mutationFn: ({ format, eventId }: { format: 'csv' | 'xlsx'; eventId?: string }) =>
+    mutationFn: ({ format, eventId }: { format: 'csv' | 'xlsx' | 'docx'; eventId?: string }) =>
       reportsApi.downloadCrmExport(format, eventId),
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de l’export')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.report.export_error'))),
   });
 }

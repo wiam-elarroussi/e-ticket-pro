@@ -58,6 +58,7 @@ export interface RemoteAccessLog {
   scanType: 'TICKET' | 'SUBSCRIPTION';
   result: 'VALID' | 'ALREADY_SCANNED' | 'INVALID' | 'CANCELLED' | 'WRONG_EVENT' | 'OVERRIDDEN';
   scannedAt: string;
+  latencyMs?: number | null;
 }
 
 export interface RemoteSalesChannel {
@@ -93,24 +94,28 @@ export class ServicesClient {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       });
     } catch {
-      throw new BadGatewayException(`Service indisponible : ${baseUrl}`);
+      return { status: 503, data: [] as unknown as T };
     }
-    const text = await res.text();
-    const data = text ? JSON.parse(text) : undefined;
-    return { status: res.status, data: data as T };
+    try {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : undefined;
+      return { status: res.status, data: data as T };
+    } catch {
+      return { status: res.status, data: [] as unknown as T };
+    }
   }
 
   private get venueBaseUrl() {
     return this.config.get<string>('VENUE_SERVICE_URL', 'http://localhost:3003');
   }
   private get eventsBaseUrl() {
-    return this.config.get<string>('EVENTS_SERVICE_URL', 'http://localhost:3004');
+    return this.config.get<string>('EVENTS_SERVICE_URL', 'http://localhost:3002');
   }
   private get ticketsBaseUrl() {
-    return this.config.get<string>('TICKETS_SERVICE_URL', 'http://localhost:3005');
+    return this.config.get<string>('TICKETS_SERVICE_URL', 'http://localhost:3002');
   }
   private get posBaseUrl() {
-    return this.config.get<string>('POS_SERVICE_URL', 'http://localhost:3006');
+    return this.config.get<string>('POS_SERVICE_URL', 'http://localhost:3004');
   }
   private get accessBaseUrl() {
     return this.config.get<string>('ACCESS_SERVICE_URL', 'http://localhost:3007');

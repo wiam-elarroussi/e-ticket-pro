@@ -38,6 +38,20 @@ export class ServicesClient {
     return this.config.get<string>('TICKETS_SERVICE_URL', 'http://localhost:3005');
   }
 
+  private get venueBaseUrl() {
+    return this.config.get<string>('VENUE_SERVICE_URL', 'http://localhost:3003');
+  }
+
+  /** Contrôle d'accréditation physique (module 6) : la porte scannée dessert-elle
+   * bien la zone du siège de ce billet ? cf. gates.service.ts#checkZoneAccess. */
+  checkGateZoneAccess(token: string, gateId: string, seatId: string) {
+    return this.request<{ allowed: boolean; zoneId: string; zoneName: string; restricted: boolean }>(
+      this.venueBaseUrl,
+      `/gates/${gateId}/zone-check?seatId=${seatId}`,
+      token,
+    );
+  }
+
   verifyTicketCode(token: string, code: string) {
     return this.request<{
       checksumValid: boolean;
@@ -51,6 +65,18 @@ export class ServicesClient {
     }>(this.ticketsBaseUrl, `/tickets/verify?code=${encodeURIComponent(code)}`, token);
   }
 
+  verifyTicketNfc(token: string, nfcTagId: string) {
+    return this.request<{
+      exists: boolean;
+      ticket: {
+        id: string;
+        eventId: string | null;
+        status: 'ACTIVE' | 'CANCELLED';
+        dataSnapshot: Record<string, unknown>;
+      } | null;
+    }>(this.ticketsBaseUrl, `/tickets/verify-nfc?nfcTagId=${encodeURIComponent(nfcTagId)}`, token);
+  }
+
   checkSubscriptionAccess(token: string, subscriptionId: string, eventId: string) {
     return this.request<{ granted: boolean; reason: string | null; seatId?: string | null }>(
       this.eventsBaseUrl,
@@ -61,10 +87,8 @@ export class ServicesClient {
 
   /** Liste blanche/noire pour un événement (module 6.3) — export en masse pour caching hors-ligne côté porte/PDA. */
   listTicketsForEvent(token: string, eventId: string) {
-    return this.request<Array<{ id: string; code: string; checksum: string; status: 'ACTIVE' | 'CANCELLED' }>>(
-      this.ticketsBaseUrl,
-      `/tickets?eventId=${eventId}`,
-      token,
-    );
+    return this.request<
+      Array<{ id: string; code: string; checksum: string; status: 'ACTIVE' | 'CANCELLED'; nfcTagId: string | null }>
+    >(this.ticketsBaseUrl, `/tickets?eventId=${eventId}`, token);
   }
 }

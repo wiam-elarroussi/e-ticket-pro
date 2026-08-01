@@ -27,9 +27,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: JwtPayload): Promise<JwtPayload> {
-    const isRevoked = await this.redisService.get(`session:${payload.sid}:revoked`);
-    if (isRevoked) {
-      throw new UnauthorizedException('Session révoquée');
+    try {
+      const isRevoked = await this.redisService.get(`session:${payload.sid}:revoked`);
+      if (isRevoked) {
+        throw new UnauthorizedException('Session révoquée');
+      }
+    } catch (err) {
+      if (err instanceof UnauthorizedException) throw err;
+      // Redis unavailable
     }
     return payload;
   }

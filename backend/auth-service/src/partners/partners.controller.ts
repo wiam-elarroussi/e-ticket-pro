@@ -1,17 +1,36 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { PartnersService } from './partners.service';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto, PartnerStatusDto } from './dto/update-partner.dto';
+import { PartnerLoginDto } from './dto/partner-login.dto';
+import { CurrentPartner } from './decorators/current-partner.decorator';
 import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('partners')
 export class PartnersController {
   constructor(private readonly partnersService: PartnersService) {}
+
+  /** Portail partenaire (module 4) : connexion par clé API. */
+  @Public()
+  @Post('login')
+  login(@Body() dto: PartnerLoginDto) {
+    return this.partnersService.loginWithApiKey(dto.apiKey);
+  }
+
+  /** Portail partenaire : tableau de bord du partenaire connecté (profil + quotas). Doit précéder ':id'. */
+  @Public()
+  @UseGuards(AuthGuard('partner-jwt'))
+  @Get('me')
+  findMe(@CurrentPartner('sub') partnerId: string) {
+    return this.partnersService.findMyDashboard(partnerId);
+  }
 
   @RequirePermissions('partners:read')
   @Get()
@@ -72,5 +91,12 @@ export class PartnersController {
   @Delete(':id')
   hardDelete(@Param('id', ParseUUIDPipe) id: string) {
     return this.partnersService.hardDelete(id);
+  }
+
+  /** Émet/régénère la clé API du portail partenaire — affichée une seule fois côté client. */
+  @RequirePermissions('partners:update')
+  @Post(':id/api-key')
+  generateApiKey(@Param('id', ParseUUIDPipe) id: string) {
+    return this.partnersService.generateApiKey(id);
   }
 }

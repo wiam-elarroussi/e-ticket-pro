@@ -32,3 +32,9 @@ Thumbs.db
 # Misc
 coverage/
 .turbo/
+
+# Fichiers uploadés localement (images d'événements, etc.) — pas du code source
+backend/*/uploads/
+
+# Artefacts SQLite locaux accidentels (le projet utilise PostgreSQL)
+*.db

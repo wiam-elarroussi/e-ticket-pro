@@ -35,6 +35,24 @@ export class SubscriptionFormulasService {
     });
   }
 
+  /** Catalogue public (E-Ticket-Pay) : uniquement les formules encore valides, sans le volume de ventes (staff-only). */
+  findAllPublic(venueId?: string) {
+    return this.prisma.subscriptionFormula.findMany({
+      where: { validTo: { gte: new Date() }, ...(venueId ? { venueId } : {}) },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        venueId: true,
+        price: true,
+        validFrom: true,
+        validTo: true,
+        globalAccess: true,
+      },
+      orderBy: { price: 'asc' },
+    });
+  }
+
   async findById(id: string) {
     const formula = await this.prisma.subscriptionFormula.findUnique({
       where: { id },

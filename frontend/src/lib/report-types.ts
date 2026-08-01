@@ -13,7 +13,7 @@ export interface EventDashboard {
   occupancy: { totalSeats: number; soldSeats: number; occupancyRate: number };
   tickets: { total: number; active: number; cancelled: number };
   revenue: { total: number; orderCount: number; byChannel: ChannelRevenue[] };
-  access: { counts: Record<AccessResult, number>; entriesGranted: number };
+  access: { counts: Record<AccessResult, number>; entriesGranted: number; avgLatencyMs: number | null };
 }
 
 export interface EventComparisonEntry {
@@ -25,4 +25,4 @@ export interface EventComparisonEntry {
   orderCount: number;
 }
 
-export type ExportFormat = 'csv' | 'xlsx' | 'pdf' | 'xml';
+export type ExportFormat = 'csv' | 'xlsx' | 'pdf' | 'xml' | 'docx';

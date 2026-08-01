@@ -36,13 +36,17 @@ export class ReportsService {
       this.services.listSalesChannels(token),
     ]);
 
-    const seats = (venueRes.data?.stands ?? []).flatMap((s) => s.zones.flatMap((z) => z.rows.flatMap((r) => r.seats)));
+    const stands = venueRes.data?.stands ?? [];
+    const seats = stands.flatMap((s) =>
+      (s.zones ?? []).flatMap((z) => (z.rows ?? []).flatMap((r) => r.seats ?? []))
+    );
     const totalSeats = seats.length;
     const soldSeats = seats.filter((s) => s.status === 'SOLD').length;
 
-    const tickets = ticketsRes.data ?? [];
-    const orders = (ordersRes.data ?? []).filter((o) => o.eventId === eventId);
-    const channels = channelsRes.data ?? [];
+    const tickets = Array.isArray(ticketsRes.data) ? ticketsRes.data : [];
+    const rawOrders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+    const orders = rawOrders.filter((o) => o.eventId === eventId);
+    const channels = Array.isArray(channelsRes.data) ? channelsRes.data : [];
 
     const revenueByChannelMap = new Map<string, { amount: number; orderCount: number }>();
     for (const order of orders) {
@@ -56,10 +60,12 @@ export class ReportsService {
       .map(([channelId, v]) => ({ channelId, channelName: channelName(channels, channelId), ...v }))
       .sort((a, b) => b.amount - a.amount);
 
-    const accessLogs = accessRes.status === 200 ? accessRes.data ?? [] : [];
+    const accessLogs = Array.isArray(accessRes.data) ? accessRes.data : [];
     const accessCounts = Object.fromEntries(
       ACCESS_RESULTS.map((r) => [r, accessLogs.filter((l) => l.result === r).length]),
     ) as Record<(typeof ACCESS_RESULTS)[number], number>;
+    const latencies = accessLogs.map((l) => l.latencyMs).filter((v): v is number => typeof v === 'number');
+    const avgLatencyMs = latencies.length > 0 ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : null;
 
     return {
       event: { id: event.id, name: event.name, startAt: event.startAt, status: event.status },
@@ -81,6 +87,7 @@ export class ReportsService {
       access: {
         counts: accessCounts,
         entriesGranted: accessCounts.VALID + accessCounts.OVERRIDDEN,
+        avgLatencyMs,
       },
     };
   }
@@ -102,12 +109,14 @@ export class ReportsService {
           this.services.listOrders(token, eventId),
         ]);
         if (!eventRes.data) return null;
-        const orders = (ordersRes.data ?? []).filter((o) => o.eventId === eventId);
+        const rawOrders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+        const rawTickets = Array.isArray(ticketsRes.data) ? ticketsRes.data : [];
+        const orders = rawOrders.filter((o) => o.eventId === eventId);
         return {
           eventId,
           name: eventRes.data.name,
           startAt: eventRes.data.startAt,
-          ticketsSold: (ticketsRes.data ?? []).filter((t) => t.status === 'ACTIVE').length,
+          ticketsSold: rawTickets.filter((t) => t.status === 'ACTIVE').length,
           revenue: sumCompletedOrders(orders),
           orderCount: orders.filter((o) => o.status === 'COMPLETED').length,
         };
@@ -122,8 +131,8 @@ export class ReportsService {
       this.services.listOrders(token, eventId),
       this.services.listSalesChannels(token),
     ]);
-    const orders = ordersRes.data ?? [];
-    const channels = channelsRes.data ?? [];
+    const orders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+    const channels = Array.isArray(channelsRes.data) ? channelsRes.data : [];
 
     const map = new Map<string, { amount: number; orderCount: number; ticketCount: number }>();
     for (const order of orders) {

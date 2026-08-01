@@ -1,12 +1,16 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentCustomer } from '../common/decorators/current-customer.decorator';
 import { SubscriptionsService } from './subscriptions.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
 import { CheckAccessQueryDto } from './dto/check-access-query.dto';
+import { PublicPurchaseSubscriptionDto } from './dto/public-purchase-subscription.dto';
 import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -24,6 +28,22 @@ export class SubscriptionsController {
   @Post()
   create(@Body() dto: CreateSubscriptionDto, @CurrentUser() user: JwtPayload) {
     return this.subscriptionsService.create(dto, user.sub);
+  }
+
+  /** Achat public E-Ticket-Pay — voir SubscriptionsService.publicPurchase. */
+  @Public()
+  @UseGuards(AuthGuard('customer-jwt'))
+  @Post('public-purchase')
+  publicPurchase(@Body() dto: PublicPurchaseSubscriptionDto, @CurrentCustomer('sub') customerId: string) {
+    return this.subscriptionsService.publicPurchase(dto, customerId);
+  }
+
+  /** "Espace abonné" (E-Ticket-Pay) — doit précéder ':id'. */
+  @Public()
+  @UseGuards(AuthGuard('customer-jwt'))
+  @Get('public/mine')
+  findMinePublic(@CurrentCustomer('sub') customerId: string) {
+    return this.subscriptionsService.findMinePublic(customerId);
   }
 
   /** Doit précéder ':id' (segment littéral vs paramètre au même niveau). */

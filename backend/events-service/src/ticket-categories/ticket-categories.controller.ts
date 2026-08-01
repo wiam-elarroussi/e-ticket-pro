@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGu
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { TicketCategoriesService } from './ticket-categories.service';
 import { CreateTicketCategoryDto } from './dto/create-ticket-category.dto';
 import { UpdateTicketCategoryDto } from './dto/update-ticket-category.dto';
@@ -14,6 +15,13 @@ export class TicketCategoriesController {
   @RequirePermissions('pricing:read')
   @Get()
   findAll() {
+    return this.ticketCategoriesService.findAll();
+  }
+
+  /** Catalogue public (E-Ticket-Pay) : le sélecteur de siège doit afficher les catégories de billet disponibles. Doit précéder ':id'. */
+  @Public()
+  @Get('public')
+  findAllPublic() {
     return this.ticketCategoriesService.findAll();
   }
 

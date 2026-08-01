@@ -40,6 +40,15 @@ model Venue {
   @@map("venues")
 }
 
+// Etat matériel déclaré par le poste de contrôle (tourniquet/couloir rapide) —
+// lettre de conformité §4 "Contrôle Centralisé : Monitoring graphique de
+// l'état de chaque obstacle physique". FAULT = signalé en panne par l'opérateur.
+enum GateDeviceStatus {
+  ONLINE
+  OFFLINE
+  FAULT
+}
+
 model Gate {
   id          String   @id @default(uuid()) @db.Uuid
   venueId     String   @map("venue_id") @db.Uuid
@@ -47,6 +56,12 @@ model Gate {
   code        String?  @db.VarChar(30)
   description String?  @db.VarChar(255)
   createdAt   DateTime @default(now()) @map("created_at")
+
+  // Dernier statut reporté (par un scan réel à cette porte, ou déclaré manuellement) +
+  // horodatage — sert à calculer un statut effectif (OFFLINE si silence prolongé),
+  // cf. GatesService#withEffectiveStatus.
+  deviceStatus    GateDeviceStatus @default(OFFLINE) @map("device_status")
+  lastHeartbeatAt DateTime?        @map("last_heartbeat_at")
 
   venue      Venue            @relation(fields: [venueId], references: [id], onDelete: Cascade)
   zoneAccess GateZoneAccess[]

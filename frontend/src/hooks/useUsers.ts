@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import * as usersApi from '@/api/users';
 import { ApiError } from '@/lib/api-client';
 import { PermissionEffect } from '@/lib/types';
+import { useI18nStore } from '@/store/i18n-store';
 
 function errorMessage(err: unknown, fallback: string) {
   return err instanceof ApiError ? err.message : fallback;
@@ -22,63 +23,68 @@ export function useUsers() {
 
 export function useCreateUser() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: usersApi.createUser,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Utilisateur créé');
+      toast.success(t('toast.user.created'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de la création')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.generic.create_error'))),
   });
 }
 
 export function useUpdateUser() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: usersApi.UpdateUserPayload }) =>
       usersApi.updateUser(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Utilisateur mis à jour');
+      toast.success(t('toast.user.updated'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de la mise à jour')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.generic.update_error'))),
   });
 }
 
 export function useDeleteUser() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: usersApi.deleteUser,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Utilisateur supprimé');
+      toast.success(t('toast.user.deleted'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de la suppression')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.generic.delete_error'))),
   });
 }
 
 export function useSetUserPermission() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: ({ id, permissionId, effect }: { id: string; permissionId: string; effect: PermissionEffect }) =>
       usersApi.setUserPermission(id, permissionId, effect),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Permission mise à jour');
+      toast.success(t('toast.user.permission_updated'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.generic.error'))),
   });
 }
 
 export function useRemoveUserPermission() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: ({ id, permissionId }: { id: string; permissionId: string }) =>
       usersApi.removeUserPermission(id, permissionId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Override retiré');
+      toast.success(t('toast.user.override_removed'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.generic.error'))),
   });
 }

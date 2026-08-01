@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import * as templatesApi from '@/api/ticket-templates';
 import { ApiError } from '@/lib/api-client';
+import { useI18nStore } from '@/store/i18n-store';
 
 function errorMessage(err: unknown, fallback: string) {
   return err instanceof ApiError ? err.message : fallback;
@@ -23,38 +24,41 @@ export function useTicketTemplate(id: string) {
 
 export function useCreateTicketTemplate() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: templatesApi.createTicketTemplate,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ticket-templates'] });
-      toast.success('Gabarit créé');
+      toast.success(t('toast.template.created'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de la création')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.generic.create_error'))),
   });
 }
 
 export function useUpdateTicketTemplate() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Partial<templatesApi.TicketTemplatePayload> }) =>
       templatesApi.updateTicketTemplate(id, payload),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['ticket-templates'] });
       qc.invalidateQueries({ queryKey: ['ticket-templates', vars.id] });
-      toast.success('Gabarit enregistré');
+      toast.success(t('toast.template.saved'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de l’enregistrement')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.template.save_error'))),
   });
 }
 
 export function useDeleteTicketTemplate() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: templatesApi.deleteTicketTemplate,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ticket-templates'] });
-      toast.success('Gabarit supprimé');
+      toast.success(t('toast.template.deleted'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de la suppression')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.generic.delete_error'))),
   });
 }

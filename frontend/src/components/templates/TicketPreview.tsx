@@ -76,7 +76,7 @@ export function TicketPreview({ template, dataSnapshot, qrDataUrl, barcodeDataUr
         backgroundColor: template.backgroundColor,
         overflow: 'hidden',
       }}
-      className="ring-1 ring-slate-300"
+      className="ring-1 ring-slate-300 dark:ring-slate-600"
     >
       {template.elements.map(renderElement)}
     </div>

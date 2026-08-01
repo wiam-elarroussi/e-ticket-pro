@@ -19,9 +19,13 @@ export class PermissionsService {
 
   async getEffectivePermissions(userId: string): Promise<string[]> {
     const cacheKey = `perms:${userId}`;
-    const cached = await this.redis.get(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
+    try {
+      const cached = await this.redis.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (err) {
+      // Redis unavailable, fallback to DB
     }
 
     const user = await this.prisma.user.findUniqueOrThrow({
@@ -43,12 +47,20 @@ export class PermissionsService {
     }
 
     const permissions = Array.from(effective);
-    await this.redis.set(cacheKey, JSON.stringify(permissions), 'EX', CACHE_TTL_SECONDS);
+    try {
+      await this.redis.set(cacheKey, JSON.stringify(permissions), 'EX', CACHE_TTL_SECONDS);
+    } catch (err) {
+      // Redis unavailable
+    }
     return permissions;
   }
 
   /** À appeler à chaque changement de rôle/permissions ou lors d'une révocation de session. */
   async invalidate(userId: string): Promise<void> {
-    await this.redis.del(`perms:${userId}`);
+    try {
+      await this.redis.del(`perms:${userId}`);
+    } catch (err) {
+      // Redis unavailable
+    }
   }
 }

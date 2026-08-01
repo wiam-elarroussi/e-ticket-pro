@@ -29,6 +29,7 @@ export class EventsService {
         salesOpenAt: dto.salesOpenAt ? new Date(dto.salesOpenAt) : undefined,
         salesCloseAt: dto.salesCloseAt ? new Date(dto.salesCloseAt) : undefined,
         maxPerOrder: dto.maxPerOrder,
+        imageUrl: dto.imageUrl,
         createdById,
       },
     });
@@ -41,9 +42,26 @@ export class EventsService {
     });
   }
 
+  /** Catalogue public (E-Ticket-Pay) : ne jamais exposer les DRAFT/CANCELLED. */
+  findAllPublished(venueId?: string) {
+    return this.prisma.event.findMany({
+      where: { status: 'PUBLISHED', ...(venueId ? { venueId } : {}) },
+      orderBy: { startAt: 'asc' },
+    });
+  }
+
   async findById(id: string) {
     const event = await this.prisma.event.findUnique({ where: { id } });
     if (!event) {
+      throw new NotFoundException('Événement introuvable');
+    }
+    return event;
+  }
+
+  /** Variante publique : un événement non publié doit rester invisible (404, pas 403, pour ne pas confirmer son existence). */
+  async findPublishedById(id: string) {
+    const event = await this.prisma.event.findUnique({ where: { id } });
+    if (!event || event.status !== 'PUBLISHED') {
       throw new NotFoundException('Événement introuvable');
     }
     return event;
@@ -71,6 +89,7 @@ export class EventsService {
         salesOpenAt: dto.salesOpenAt ? new Date(dto.salesOpenAt) : undefined,
         salesCloseAt: dto.salesCloseAt ? new Date(dto.salesCloseAt) : undefined,
         maxPerOrder: dto.maxPerOrder,
+        imageUrl: dto.imageUrl,
       },
     });
   }

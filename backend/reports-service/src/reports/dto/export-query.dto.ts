@@ -5,13 +5,13 @@ export class ExportOrdersQueryDto {
   @IsUUID()
   eventId?: string;
 
-  @IsIn(['csv', 'xlsx', 'pdf', 'xml'])
-  format!: 'csv' | 'xlsx' | 'pdf' | 'xml';
+  @IsIn(['csv', 'xlsx', 'pdf', 'xml', 'docx'])
+  format!: 'csv' | 'xlsx' | 'pdf' | 'xml' | 'docx';
 }
 
 export class ExportAccessLogsQueryDto {
-  @IsIn(['csv', 'xlsx', 'pdf', 'xml'])
-  format!: 'csv' | 'xlsx' | 'pdf' | 'xml';
+  @IsIn(['csv', 'xlsx', 'pdf', 'xml', 'docx'])
+  format!: 'csv' | 'xlsx' | 'pdf' | 'xml' | 'docx';
 }
 
 export class ExportCrmQueryDto {
@@ -19,6 +19,6 @@ export class ExportCrmQueryDto {
   @IsUUID()
   eventId?: string;
 
-  @IsIn(['csv', 'xlsx'])
-  format!: 'csv' | 'xlsx';
+  @IsIn(['csv', 'xlsx', 'docx'])
+  format!: 'csv' | 'xlsx' | 'docx';
 }

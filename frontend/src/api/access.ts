@@ -5,6 +5,7 @@ export interface ScanPayload {
   eventId: string;
   gateId: string;
   code?: string;
+  nfcTagId?: string;
   subscriptionId?: string;
   force?: boolean;
 }

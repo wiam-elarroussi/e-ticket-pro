@@ -1,5 +1,5 @@
 export type OrderStatus = 'COMPLETED' | 'CANCELLED' | 'REFUNDED';
-export type PaymentMethod = 'CASH' | 'CARD' | 'VOUCHER';
+export type PaymentMethod = 'CASH' | 'CARD' | 'VOUCHER' | 'ONLINE' | 'APPLE_PAY' | 'GOOGLE_PAY';
 
 export interface OrderItem {
   id: string;

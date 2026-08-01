@@ -1,10 +1,13 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
+import { AuthGuard } from '@nestjs/passport';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CurrentCustomer } from '../common/decorators/current-customer.decorator';
 import { BearerToken } from '../common/decorators/bearer-token.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { ImportTicketsDto } from './dto/import-tickets.dto';
@@ -29,6 +32,17 @@ export class TicketsController {
     return this.ticketsService.verifyCode(code);
   }
 
+  /**
+   * Vérification par identifiant NFC/RFID (bracelet ou carte sans contact) — pas de
+   * checksum ici : l'unicité du tag (assertNfcTagAvailable à la création) est la
+   * garantie d'intégrité, comme pour une puce physique inclonable. Doit précéder ':id'.
+   */
+  @RequirePermissions('tickets:read')
+  @Get('verify-nfc')
+  verifyNfc(@Query('nfcTagId') nfcTagId: string) {
+    return this.ticketsService.verifyNfc(nfcTagId);
+  }
+
   /** Export CSV des codes générés. Doit précéder ':id'. */
   @RequirePermissions('tickets:read')
   @Get('export.csv')
@@ -45,11 +59,40 @@ export class TicketsController {
     return this.ticketsService.create(dto, user.sub, token);
   }
 
+  /**
+   * Généré par pos-service pour le compte d'un achat public (E-Ticket-Pay,
+   * module Réservation & Achat) — appelée avec le token du client final, pas
+   * un opérateur. Le siège est déjà marqué Vendu à ce stade (public-status
+   * de venue-service), donc dto.seatId reste vide ici comme pour le flux staff.
+   */
+  @Public()
+  @UseGuards(AuthGuard('customer-jwt'))
+  @Post('customer-purchase')
+  createForCustomer(
+    @Body() dto: CreateTicketDto,
+    @CurrentCustomer('sub') customerId: string,
+    @BearerToken() token: string,
+  ) {
+    return this.ticketsService.create(dto, customerId, token);
+  }
+
   /** Génération en masse (ex: lot de bracelets VIP pré-imprimés). */
   @RequirePermissions('tickets:create')
   @Post('import')
   importBulk(@Body() dto: ImportTicketsDto, @CurrentUser() user: JwtPayload) {
     return this.ticketsService.importBulk(dto, user.sub);
+  }
+
+  /**
+   * "Mes billets" (E-Ticket-Pay) : relecture d'un billet acheté par le client
+   * lui-même (pour ré-afficher son QR code) — droit `customer-jwt`, pas
+   * `tickets:read` (réservé au personnel). Doit précéder ':id'.
+   */
+  @Public()
+  @UseGuards(AuthGuard('customer-jwt'))
+  @Get('customer/:id')
+  findOneForCustomer(@Param('id', ParseUUIDPipe) id: string, @CurrentCustomer('sub') customerId: string) {
+    return this.ticketsService.findByIdForCustomer(id, customerId);
   }
 
   @RequirePermissions('tickets:read')

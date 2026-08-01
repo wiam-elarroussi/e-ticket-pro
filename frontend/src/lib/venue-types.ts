@@ -18,6 +18,8 @@ export interface Venue {
   _count?: { stands: number; gates: number };
 }
 
+export type GateDeviceStatus = 'ONLINE' | 'OFFLINE' | 'FAULT';
+
 export interface Gate {
   id: string;
   venueId: string;
@@ -25,6 +27,9 @@ export interface Gate {
   code: string | null;
   description: string | null;
   createdAt: string;
+  deviceStatus: GateDeviceStatus;
+  lastHeartbeatAt: string | null;
+  effectiveStatus: GateDeviceStatus;
 }
 
 export interface Stand {

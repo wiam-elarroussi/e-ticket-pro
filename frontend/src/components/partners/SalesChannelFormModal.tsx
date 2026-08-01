@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,20 +10,22 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useCreateSalesChannel, useUpdateSalesChannel } from '@/hooks/useSalesChannels';
 import { usePartners } from '@/hooks/usePartners';
-import { salesChannelTypeLabels as typeLabels } from '@/lib/sales-channel';
+import { getSalesChannelTypeLabels } from '@/lib/sales-channel';
 import { SalesChannel } from '@/lib/types';
+import { useI18nStore, TranslationKey } from '@/store/i18n-store';
 
 const TIME_RULE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-const schema = z.object({
-  partnerId: z.string().optional().or(z.literal('')),
-  name: z.string().min(1).max(150),
-  type: z.enum(['LOCAL_POS', 'REMOTE_POS', 'WEB', 'PARTNER_API']),
-  salesWindowStart: z.string().regex(TIME_RULE, 'Format HH:mm').optional().or(z.literal('')),
-  salesWindowEnd: z.string().regex(TIME_RULE, 'Format HH:mm').optional().or(z.literal('')),
-});
+const buildSchema = (t: (key: TranslationKey) => string) =>
+  z.object({
+    partnerId: z.string().optional().or(z.literal('')),
+    name: z.string().min(1).max(150),
+    type: z.enum(['LOCAL_POS', 'REMOTE_POS', 'WEB', 'PARTNER_API']),
+    salesWindowStart: z.string().regex(TIME_RULE, t('partners.form.err_time_format')).optional().or(z.literal('')),
+    salesWindowEnd: z.string().regex(TIME_RULE, t('partners.form.err_time_format')).optional().or(z.literal('')),
+  });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 interface SalesChannelFormModalProps {
   open: boolean;
@@ -41,6 +43,8 @@ export function SalesChannelFormModal({ open, onClose, partnerId, channel }: Sal
   const createChannel = useCreateSalesChannel();
   const updateChannel = useUpdateSalesChannel();
   const { data: partners } = usePartners();
+  const t = useI18nStore((s) => s.t);
+  const schema = useMemo(() => buildSchema(t), [t]);
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   useEffect(() => {
@@ -74,11 +78,11 @@ export function SalesChannelFormModal({ open, onClose, partnerId, channel }: Sal
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Modifier le canal de vente' : 'Nouveau canal de vente'}>
+    <Modal open={open} onClose={onClose} title={isEdit ? t('partners.form.edit_channel') : t('partners.form.new_channel')}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         {!partnerId && !isEdit && (
-          <Select label="Partenaire" {...form.register('partnerId')}>
-            <option value="">Aucun (canal interne / guichet)</option>
+          <Select label={t('partners.form.partner')} {...form.register('partnerId')}>
+            <option value="">{t('partners.form.no_partner_internal')}</option>
             {(partners ?? []).map((p) => (
               <option key={p.id} value={p.id}>
                 {p.companyName}
@@ -86,9 +90,9 @@ export function SalesChannelFormModal({ open, onClose, partnerId, channel }: Sal
             ))}
           </Select>
         )}
-        <Input label="Nom" error={form.formState.errors.name?.message} {...form.register('name')} />
-        <Select label="Type" error={form.formState.errors.type?.message} {...form.register('type')}>
-          {Object.entries(typeLabels).map(([value, label]) => (
+        <Input label={t('ui.name')} error={form.formState.errors.name?.message} {...form.register('name')} />
+        <Select label={t('ui.type')} error={form.formState.errors.type?.message} {...form.register('type')}>
+          {Object.entries(getSalesChannelTypeLabels(t)).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
@@ -96,25 +100,25 @@ export function SalesChannelFormModal({ open, onClose, partnerId, channel }: Sal
         </Select>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
-            label="Plage horaire — début"
+            label={t('partners.form.time_window_start')}
             placeholder="08:00"
             error={form.formState.errors.salesWindowStart?.message}
             {...form.register('salesWindowStart')}
           />
           <Input
-            label="Plage horaire — fin"
+            label={t('partners.form.time_window_end')}
             placeholder="20:00"
             error={form.formState.errors.salesWindowEnd?.message}
             {...form.register('salesWindowEnd')}
           />
         </div>
-        <p className="text-xs text-slate-400">Laissez vide pour une vente autorisée 24h/24.</p>
+        <p className="text-xs text-slate-400">{t('partners.form.time_window_hint')}</p>
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
           <Button type="submit" isLoading={isPending}>
-            {isEdit ? 'Enregistrer' : 'Créer'}
+            {isEdit ? t('ui.save') : t('ui.create')}
           </Button>
         </div>
       </form>

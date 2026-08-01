@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { TicketTemplatesService } from './ticket-templates.service';
 import { CreateTicketTemplateDto } from './dto/create-ticket-template.dto';
 import { UpdateTicketTemplateDto } from './dto/update-ticket-template.dto';
@@ -17,6 +18,13 @@ export class TicketTemplatesController {
   @Get()
   findAll() {
     return this.ticketTemplatesService.findAll();
+  }
+
+  /** Achat public E-Ticket-Pay : juste un id, pas le design complet. Doit précéder ':id'. */
+  @Public()
+  @Get('public/default')
+  findDefaultPublic() {
+    return this.ticketTemplatesService.findDefaultId();
   }
 
   @RequirePermissions('templates:read')

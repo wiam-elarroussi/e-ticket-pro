@@ -4,13 +4,14 @@ import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Fragment, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Ban, Printer, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Ban, Printer, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useTicketTemplate } from '@/hooks/useTicketTemplates';
 import { useCancelTicket, useCodeImage, useCreateTicket, useReprintTicket, useTicket, useTickets } from '@/hooks/useTickets';
 import { useEvents } from '@/hooks/useEvents';
 import { useVenueFullTree } from '@/hooks/useVenues';
 import { useOrders } from '@/hooks/useOrders';
 import { useAuthStore } from '@/store/auth-store';
+import { useI18nStore } from '@/store/i18n-store';
 import { ApiError } from '@/lib/api-client';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -21,7 +22,6 @@ import { Spinner } from '@/components/ui/Spinner';
 import { RequirePermission } from '@/components/auth/RequirePermission';
 import { TicketPreview } from '@/components/templates/TicketPreview';
 
-/** Construit un objet imbriqué à partir de chemins pointés (ex: "event.name" -> { event: { name } }). */
 function buildDataSnapshot(values: Record<string, string>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [path, value] of Object.entries(values)) {
@@ -62,20 +62,17 @@ function GenerateTicketPageContent() {
   const canCreate = hasPermission('tickets:create');
   const canReprint = hasPermission('tickets:reprint');
   const canCancel = hasPermission('tickets:cancel');
+  const { t } = useI18nStore();
 
-  // Bindings génériques (tout ce qui n'est pas event.*, seat.* ou buyer.fullName) restent en saisie libre.
   const [otherValues, setOtherValues] = useState<Record<string, string>>({});
   const [nfcTagId, setNfcTagId] = useState('');
   const [lastTicketId, setLastTicketId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // event.* : sélectionné dans la base des Événements.
   const { data: events } = useEvents();
   const [eventId, setEventId] = useState('');
   const selectedEvent = events?.find((e) => e.id === eventId);
 
-  // seat.* : sélecteur en cascade (Tribune → Zone → Rang → Siège), scopé à l'enceinte de l'événement choisi,
-  // limité aux sièges au statut AVAILABLE (repris du composant plan 2D du module 2).
   const { data: venue } = useVenueFullTree(selectedEvent?.venueId ?? '');
   const [standId, setStandId] = useState('');
   const [zoneId, setZoneId] = useState('');
@@ -92,13 +89,11 @@ function GenerateTicketPageContent() {
   const selectedRow = rows.find((r) => r.id === rowId);
   const selectedSeat = availableSeats.find((s) => s.id === seatId);
   const seatLabelText = selectedSeat
-    ? `${selectedStand?.name ?? ''} · ${selectedZone?.name ?? ''} · Rang ${selectedRow?.label ?? ''} · Siège ${
+    ? `${selectedStand?.name ?? ''} · ${selectedZone?.name ?? ''} · ${t('templates.generate.row_label_prefix')} ${selectedRow?.label ?? ''} · ${t('templates.generate.seat_label_prefix')} ${
         selectedSeat.label ?? selectedSeat.number
       }`
     : '';
 
-  // buyer.fullName : recherche/complétion sur les acheteurs déjà connus (agrégés depuis les ventes guichet du module 5 —
-  // il n'existe pas de registre "clients" dédié, on réutilise donc les acheteurs déjà saisis lors de ventes précédentes).
   const { data: orders } = useOrders();
   const buyerSuggestions = Array.from(
     new Set((orders ?? []).map((o) => o.buyerName).filter((n): n is string => !!n && n.trim().length > 0)),
@@ -121,8 +116,6 @@ function GenerateTicketPageContent() {
     setSeatId('');
   };
 
-  // Reconstruit systématiquement l'aperçu (avant même de générer réellement le billet) dès que
-  // l'événement, l'acheteur et/ou le siège sont sélectionnés.
   const liveSnapshot: Record<string, unknown> = buildDataSnapshot(otherValues);
   if (usesEvent && selectedEvent) {
     liveSnapshot.event = {
@@ -146,7 +139,7 @@ function GenerateTicketPageContent() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
-        <Spinner className="h-6 w-6 text-indigo-600" />
+        <Spinner className="h-6 w-6 text-[#00875A]" />
       </div>
     );
   }
@@ -156,15 +149,15 @@ function GenerateTicketPageContent() {
       <EmptyState
         message={
           error instanceof ApiError
-            ? `Impossible de charger ce gabarit : ${error.message}`
-            : 'Impossible de charger ce gabarit. Réessayez plus tard.'
+            ? `${t('templates.generate.error_loading')}: ${error.message}`
+            : t('templates.generate.error_loading_generic')
         }
       />
     );
   }
 
   if (!template) {
-    return <EmptyState message="Gabarit introuvable." />;
+    return <EmptyState message={t('templates.generate.not_found')} />;
   }
 
   const onSubmit = () => {
@@ -180,8 +173,6 @@ function GenerateTicketPageContent() {
         onSuccess: (ticket) => {
           setLastTicketId(ticket.id);
           if (usesSeat && selectedSeat) {
-            // Le siège vient d'être marqué Vendu côté venue-service : on rafraîchit l'arborescence
-            // et on efface la sélection pour éviter de le proposer une seconde fois.
             queryClient.invalidateQueries({ queryKey: ['venues', selectedEvent?.venueId, 'full'] });
             setStandId('');
             setZoneId('');
@@ -194,34 +185,55 @@ function GenerateTicketPageContent() {
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       <Link
         href={`/dashboard/ticket-templates/${templateId}`}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"
+        className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-[#00875A] transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
-        Retour au gabarit
+        <span>{t('templates.generate.back_to_studio')}</span>
       </Link>
 
-      <h1 className="mb-1 text-xl font-semibold text-slate-900">Générer un billet — {template.name}</h1>
-      <p className="mb-6 text-sm text-slate-500">
-        Sélectionnez les données à injecter dans le gabarit ; un code sécurisé unique (QR + code-barres) est généré
-        automatiquement.
-      </p>
+      {/* En-tête du générateur */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-6 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4.5 w-4.5 text-[#00875A]" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#00875A]">
+              {t('templates.generate.badge')}
+            </span>
+          </div>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            {t('templates.generate.title_prefix')} {template.name}
+          </h1>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {t('templates.generate.desc')}
+          </p>
+        </div>
+
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-[#00875A] ring-1 ring-emerald-200">
+          <span className="h-2 w-2 rounded-full bg-[#00875A] animate-pulse" />
+          {t('templates.generate.checksum_active')}
+        </span>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>
           {canCreate ? (
-            <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <h2 className="mb-3 text-sm font-semibold text-slate-900">Données du billet</h2>
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 p-6 shadow-xs space-y-4">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2">
+                {t('templates.generate.data_to_inject')}
+              </h2>
               <div className="flex flex-col gap-3">
                 {bindings.length === 0 && (
-                  <p className="text-sm text-slate-400">Ce gabarit n’a aucun champ dynamique — aucune donnée requise.</p>
+                  <p className="text-xs text-slate-400 font-medium">
+                    {t('templates.generate.no_dynamic_field')}
+                  </p>
                 )}
 
                 {usesEvent && (
-                  <Select label="Événement" value={eventId} onChange={(e) => onEventChange(e.target.value)}>
-                    <option value="">Sélectionner un événement…</option>
+                  <Select label={t('access.event_label')} value={eventId} onChange={(e) => onEventChange(e.target.value)} className="text-xs">
+                    <option value="">{t('templates.generate.select_event')}</option>
                     {(events ?? []).map((ev) => (
                       <option key={ev.id} value={ev.id}>
                         {ev.name} — {dateFormatter.format(new Date(ev.startAt))}
@@ -233,9 +245,9 @@ function GenerateTicketPageContent() {
                 {usesBuyerName && (
                   <>
                     <Input
-                      label="Acheteur"
+                      label={t('templates.generate.buyer_name_label')}
                       list="buyer-suggestions"
-                      placeholder="Rechercher un acheteur déjà connu ou saisir un nouveau nom"
+                      placeholder={t('templates.generate.buyer_name_placeholder')}
                       value={buyerFullName}
                       onChange={(e) => setBuyerFullName(e.target.value)}
                     />
@@ -249,9 +261,9 @@ function GenerateTicketPageContent() {
 
                 {usesSeat && (
                   <div>
-                    <p className="mb-1.5 text-sm font-medium text-slate-700">Siège</p>
+                    <p className="mb-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">{t('templates.generate.numbered_seat')}</p>
                     {!eventId ? (
-                      <p className="text-sm text-slate-400">Sélectionnez d’abord un événement.</p>
+                      <p className="text-xs text-slate-400">{t('templates.generate.select_event_first')}</p>
                     ) : (
                       <>
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -263,8 +275,9 @@ function GenerateTicketPageContent() {
                               setRowId('');
                               setSeatId('');
                             }}
+                            className="text-xs"
                           >
-                            <option value="">Tribune…</option>
+                            <option value="">{t('templates.generate.stand_placeholder')}</option>
                             {stands.map((s) => (
                               <option key={s.id} value={s.id}>
                                 {s.name}
@@ -279,8 +292,9 @@ function GenerateTicketPageContent() {
                               setRowId('');
                               setSeatId('');
                             }}
+                            className="text-xs"
                           >
-                            <option value="">Zone…</option>
+                            <option value="">{t('templates.generate.zone_placeholder')}</option>
                             {zones.map((z) => (
                               <option key={z.id} value={z.id}>
                                 {z.name}
@@ -294,27 +308,34 @@ function GenerateTicketPageContent() {
                               setRowId(e.target.value);
                               setSeatId('');
                             }}
+                            className="text-xs"
                           >
-                            <option value="">Rang…</option>
+                            <option value="">{t('templates.generate.row_placeholder')}</option>
                             {rows.map((r) => (
                               <option key={r.id} value={r.id}>
                                 {r.label}
                               </option>
                             ))}
                           </Select>
-                          <Select value={seatId} disabled={!rowId} onChange={(e) => setSeatId(e.target.value)}>
-                            <option value="">Siège libre…</option>
+                          <Select value={seatId} disabled={!rowId} onChange={(e) => setSeatId(e.target.value)} className="text-xs">
+                            <option value="">{t('templates.generate.available_seat_placeholder')}</option>
                             {availableSeats.map((seat) => (
                               <option key={seat.id} value={seat.id}>
-                                {seat.label ?? `Siège ${seat.number}`}
+                                {seat.label ?? `${t('templates.generate.seat_label_prefix')} ${seat.number}`}
                               </option>
                             ))}
                           </Select>
                         </div>
                         {rowId && availableSeats.length === 0 && (
-                          <p className="mt-1 text-xs text-amber-600">Aucun siège libre sur ce rang.</p>
+                          <p className="mt-1 text-xs text-amber-600 font-semibold">
+                            {t('templates.generate.no_available_seat')}
+                          </p>
                         )}
-                        {selectedSeat && <p className="mt-1 text-xs text-slate-400">Sélection : {seatLabelText}</p>}
+                        {selectedSeat && (
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 font-bold">
+                            {t('templates.generate.selected_label')} {seatLabelText}
+                          </p>
+                        )}
                       </>
                     )}
                   </div>
@@ -330,84 +351,103 @@ function GenerateTicketPageContent() {
                 ))}
 
                 <Input
-                  label="Identifiant NFC/RFID (optionnel)"
-                  placeholder="Badge/bracelet physique associé"
+                  label={t('templates.generate.nfc_tag_label')}
+                  placeholder={t('templates.generate.nfc_tag_placeholder')}
                   value={nfcTagId}
                   onChange={(e) => setNfcTagId(e.target.value)}
                 />
-                <Button onClick={onSubmit} isLoading={createTicket.isPending} disabled={missingRequired} className="mt-2">
+                <Button
+                  onClick={onSubmit}
+                  isLoading={createTicket.isPending}
+                  disabled={missingRequired}
+                  className="mt-2 bg-[#00875A] text-white hover:bg-[#00754e]"
+                >
                   <Printer className="h-4 w-4" />
-                  Générer le billet
+                  <span>{t('templates.generate.generate_secure_ticket')}</span>
                 </Button>
               </div>
             </div>
           ) : (
-            <EmptyState message="Vous n’avez pas les droits pour générer un billet." />
+            <EmptyState message={t('templates.generate.no_permission')} />
           )}
         </div>
 
         <div>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900">Aperçu</h2>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('templates.generate.live_preview_title')}</h2>
             {lastTicketId && (
-              <Button variant="ghost" onClick={() => setLastTicketId(null)}>
-                Nouveau billet
+              <Button variant="ghost" onClick={() => setLastTicketId(null)} className="text-xs text-[#00875A]">
+                + {t('templates.generate.generate_another')}
               </Button>
             )}
           </div>
           {lastTicketId ? (
             <GeneratedTicketPreview ticketId={lastTicketId} template={template} canReprint={canReprint} canCancel={canCancel} />
           ) : (
-            <div className="overflow-auto rounded-xl bg-slate-50 p-3 ring-1 ring-inset ring-slate-200">
+            <div className="overflow-auto rounded-2xl bg-slate-50 dark:bg-slate-800 p-4 border border-slate-200/80 dark:border-slate-800/80">
               <TicketPreview template={template} dataSnapshot={liveSnapshot} />
-              <p className="mt-2 text-xs text-slate-400">
-                Aperçu en direct — le QR/code-barres définitif n’apparaît qu’après la génération réelle du billet.
+              <p className="mt-3 text-xs text-slate-400 text-center font-medium">
+                {t('templates.generate.live_preview_hint')}
               </p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="mt-8">
-        <h2 className="mb-3 font-medium text-slate-900">Billets déjà générés pour ce gabarit</h2>
+      <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+          {t('templates.generate.issued_tickets_title')}
+        </h2>
         {!tickets?.length ? (
-          <EmptyState message="Aucun billet généré pour l’instant." />
+          <EmptyState message={t('templates.generate.no_ticket_yet')} />
         ) : (
-          <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+          <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-xs">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+                <thead className="bg-slate-50/80 dark:bg-slate-800/80">
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium text-slate-500">Code</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-500">NFC/RFID</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-500">Réimpressions</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-500">Créé le</th>
-                    <th className="px-4 py-3" />
+                    <th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      {t('templates.generate.th_secure_code')}
+                    </th>
+                    <th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      {t('templates.generate.th_nfc_tag')}
+                    </th>
+                    <th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      {t('templates.generate.th_reprints')}
+                    </th>
+                    <th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      {t('templates.generate.th_issue_date')}
+                    </th>
+                    <th className="px-5 py-3.5 text-right text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      {t('ui.actions')}
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {tickets.map((ticket) => (
                     <Fragment key={ticket.id}>
-                      <tr>
-                        <td className="px-4 py-3 font-mono text-xs text-slate-700">{ticket.code}</td>
-                        <td className="px-4 py-3 text-slate-500">{ticket.nfcTagId ?? '—'}</td>
-                        <td className="px-4 py-3">
+                      <tr className="hover:bg-slate-50/60 dark:hover:bg-slate-800/60 transition-colors">
+                        <td className="px-5 py-4 font-mono text-xs font-bold text-slate-800 dark:text-slate-100">{ticket.code}</td>
+                        <td className="px-5 py-4 text-xs font-medium text-slate-600 dark:text-slate-300">{ticket.nfcTagId ?? '—'}</td>
+                        <td className="px-5 py-4">
                           {ticket.reprintCount > 0 ? (
-                            <Badge tone="amber">{ticket.reprintCount}</Badge>
+                            <span className="rounded-md bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-200">
+                              {ticket.reprintCount} {t('templates.generate.reprint_count')}
+                            </span>
                           ) : (
-                            <span className="text-slate-400">0</span>
+                            <span className="text-xs text-slate-400">0</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-slate-500">{dateFormatter.format(new Date(ticket.createdAt))}</td>
-                        <td className="px-4 py-3">
-                          <Button variant="ghost" onClick={() => setExpandedId(expandedId === ticket.id ? null : ticket.id)}>
-                            {expandedId === ticket.id ? 'Masquer' : 'Voir'}
+                        <td className="px-5 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400">{dateFormatter.format(new Date(ticket.createdAt))}</td>
+                        <td className="px-5 py-4 text-right">
+                          <Button variant="ghost" onClick={() => setExpandedId(expandedId === ticket.id ? null : ticket.id)} className="text-xs">
+                            {expandedId === ticket.id ? t('templates.generate.hide') : t('templates.generate.inspect')}
                           </Button>
                         </td>
                       </tr>
                       {expandedId === ticket.id && (
                         <tr>
-                          <td colSpan={5} className="bg-slate-50 px-4 py-4">
+                          <td colSpan={5} className="bg-slate-50/80 dark:bg-slate-800/80 px-6 py-5">
                             <GeneratedTicketPreview ticketId={ticket.id} template={template} canReprint={canReprint} canCancel={canCancel} />
                           </td>
                         </tr>
@@ -440,11 +480,12 @@ function GeneratedTicketPreview({
   const { data: barcode } = useCodeImage(ticketId, 'barcode');
   const reprint = useReprintTicket();
   const cancelTicket = useCancelTicket();
+  const { t } = useI18nStore();
 
   if (!ticket) {
     return (
       <div className="flex h-40 items-center justify-center">
-        <Spinner className="h-5 w-5 text-indigo-600" />
+        <Spinner className="h-5 w-5 text-[#00875A]" />
       </div>
     );
   }
@@ -452,8 +493,8 @@ function GeneratedTicketPreview({
   const isCancelled = ticket.status === 'CANCELLED';
 
   return (
-    <div>
-      <div className="mb-3 overflow-auto">
+    <div className="space-y-3">
+      <div className="overflow-auto rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
         <TicketPreview
           template={template}
           dataSnapshot={ticket.dataSnapshot}
@@ -461,23 +502,26 @@ function GeneratedTicketPreview({
           barcodeDataUrl={barcode?.dataUrl}
         />
       </div>
-      <p className="mb-2 flex items-center gap-2 font-mono text-xs text-slate-500">
-        Code : {ticket.code} · Checksum : {ticket.checksum}
-        {ticket.reprintCount > 0 && ` · Réimprimé ${ticket.reprintCount} fois`}
-        {isCancelled && <Badge tone="red">Annulé</Badge>}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-100 dark:bg-slate-800 p-3 font-mono text-xs text-slate-700 dark:text-slate-300">
+        <div>
+          <span>Code: <strong>{ticket.code}</strong></span>
+          <span className="mx-2">·</span>
+          <span>Checksum HMAC: <strong className="text-[#00875A]">{ticket.checksum}</strong></span>
+        </div>
+        {isCancelled && <Badge tone="red">{t('templates.generate.blacklisted')}</Badge>}
+      </div>
       {!isCancelled && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 pt-1">
           {canReprint && (
-            <Button variant="secondary" onClick={() => reprint.mutate(ticketId)} isLoading={reprint.isPending}>
+            <Button variant="secondary" onClick={() => reprint.mutate(ticketId)} isLoading={reprint.isPending} className="text-xs">
               <RefreshCw className="h-4 w-4" />
-              Réimprimer (billet perdu/invitation)
+              <span>{t('templates.generate.reprint_duplicate')}</span>
             </Button>
           )}
           {canCancel && (
-            <Button variant="ghost" onClick={() => cancelTicket.mutate(ticketId)} isLoading={cancelTicket.isPending}>
-              <Ban className="h-4 w-4 text-red-600" />
-              Annuler (liste noire)
+            <Button variant="ghost" onClick={() => cancelTicket.mutate(ticketId)} isLoading={cancelTicket.isPending} className="text-xs text-red-600 hover:bg-red-50">
+              <Ban className="h-4 w-4" />
+              <span>{t('templates.generate.blacklist_cancel')}</span>
             </Button>
           )}
         </div>
@@ -485,3 +529,5 @@ function GeneratedTicketPreview({
     </div>
   );
 }
+
+

@@ -3,8 +3,9 @@ import { ServicesClient } from '../../integrations/services-client';
 import { Column, formatCsv, formatXml } from './format.util';
 import { buildXlsxBuffer } from './xlsx.util';
 import { buildPdfBuffer } from './pdf.util';
+import { buildDocxBuffer } from './docx.util';
 
-export type ExportFormat = 'csv' | 'xlsx' | 'pdf' | 'xml';
+export type ExportFormat = 'csv' | 'xlsx' | 'pdf' | 'xml' | 'docx';
 
 export interface ExportResult {
   contentType: string;
@@ -71,7 +72,7 @@ export class ExportsService {
   /** Export CRM (module 7.3) : contacts distincts (acheteurs + abonnés) pour campagnes marketing.
    * Permission distincte (reports:export-crm) car il s'agit de données personnelles exploitables
    * à des fins commerciales, contrairement à la simple consultation de rapports (reports:read). */
-  async exportCrmContacts(token: string, eventId: string | undefined, format: 'csv' | 'xlsx'): Promise<ExportResult> {
+  async exportCrmContacts(token: string, eventId: string | undefined, format: 'csv' | 'xlsx' | 'docx'): Promise<ExportResult> {
     const [ordersRes, subsRes] = await Promise.all([
       this.services.listOrders(token, eventId),
       this.services.listSubscriptions(token),
@@ -135,6 +136,12 @@ export class ExportsService {
           contentType: 'application/pdf',
           filename: `${baseName}.pdf`,
           body: await buildPdfBuffer(title, columns, rows),
+        };
+      case 'docx':
+        return {
+          contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          filename: `${baseName}.docx`,
+          body: await buildDocxBuffer(title, columns, rows),
         };
     }
   }

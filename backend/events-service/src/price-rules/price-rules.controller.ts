@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { PriceRulesService } from './price-rules.service';
 import { CreatePriceRuleDto } from './dto/create-price-rule.dto';
 import { UpdatePriceRuleDto } from './dto/update-price-rule.dto';
@@ -18,11 +19,22 @@ export class PriceRulesController {
     return this.priceRulesService.findAll(eventId);
   }
 
-  /** Tarif effectif pour une cible donnée (utilisé par le module 5 - POS). Doit précéder ':id'. */
-  @RequirePermissions('pricing:read')
+  /**
+   * Tarif effectif pour une cible donnée — utilisé par le POS (module 5) et
+   * par E-Ticket-Pay (catalogue public, pas de donnée sensible ici). Doit
+   * précéder ':id'.
+   */
+  @Public()
   @Get('resolve')
   resolve(@Query() query: ResolvePriceQueryDto) {
     return this.priceRulesService.resolvePrice(query);
+  }
+
+  /** Prix "à partir de" pour une carte événement du catalogue public. Doit précéder ':id'. */
+  @Public()
+  @Get('public/starting-price')
+  startingPrice(@Query('eventId') eventId: string) {
+    return this.priceRulesService.findStartingPrice(eventId);
   }
 
   @RequirePermissions('pricing:read')

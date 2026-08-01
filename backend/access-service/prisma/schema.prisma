@@ -38,6 +38,7 @@ model AccessLog {
   reason     String?    @db.VarChar(255)
   scannedById String    @map("scanned_by") @db.Uuid
   scannedAt  DateTime   @default(now()) @map("scanned_at")
+  latencyMs  Int?       @map("latency_ms")
 
   @@index([eventId, ticketId])
   @@index([eventId, subscriptionId])

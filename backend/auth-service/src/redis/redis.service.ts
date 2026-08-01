@@ -10,6 +10,11 @@ export class RedisService extends Redis implements OnModuleDestroy {
       port: configService.get<number>('REDIS_PORT', 6379),
       password: configService.get<string>('REDIS_PASSWORD') || undefined,
       keyPrefix: 'eticketpro:',
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+    });
+    this.on('error', () => {
+      // Suppress unhandled redis connection errors when offline
     });
   }
 

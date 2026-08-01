@@ -4,11 +4,11 @@ import { CheckCircle2 } from 'lucide-react';
 import { useOrder } from '@/hooks/useOrders';
 import { useCodeImage, useTicket } from '@/hooks/useTickets';
 import { useTicketTemplate } from '@/hooks/useTicketTemplates';
+import { useI18nStore } from '@/store/i18n-store';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { TicketPreview } from '@/components/templates/TicketPreview';
-
-const priceFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MAD' });
+import { formatMad } from '@/lib/format';
 
 interface SaleConfirmationProps {
   orderId: string;
@@ -17,27 +17,28 @@ interface SaleConfirmationProps {
 
 export function SaleConfirmation({ orderId, onNewSale }: SaleConfirmationProps) {
   const { data: order, isLoading } = useOrder(orderId);
+  const { t } = useI18nStore();
 
   if (isLoading || !order) {
     return (
       <div className="flex justify-center py-12">
-        <Spinner className="h-6 w-6 text-indigo-600" />
+        <Spinner className="h-6 w-6 text-[#00875A]" />
       </div>
     );
   }
 
   return (
     <div>
-      <div className="mb-6 flex items-center gap-3 rounded-xl bg-green-50 p-4 ring-1 ring-inset ring-green-200">
-        <CheckCircle2 className="h-8 w-8 text-green-600" />
+      <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <CheckCircle2 className="h-8 w-8 text-[#00875A]" />
         <div>
-          <p className="font-semibold text-green-900">Vente enregistrée</p>
-          <p className="text-sm text-green-700">
-            {order.items.length} billet(s) — {priceFormatter.format(Number(order.totalAmount))}
+          <p className="font-bold text-emerald-800">{t('pos.sale.completed')}</p>
+          <p className="text-sm text-emerald-700">
+            {order.items.length} {t('pos.sale.ticket_count')} — {formatMad(order.totalAmount)}
           </p>
         </div>
-        <Button className="ml-auto" onClick={onNewSale}>
-          Nouvelle vente
+        <Button className="ml-auto bg-[#00875A] text-white hover:bg-[#00754e]" onClick={onNewSale}>
+          {t('pos.sale.new_sale')}
         </Button>
       </div>
 
@@ -57,14 +58,14 @@ function GeneratedTicketCard({ ticketId }: { ticketId: string }) {
 
   if (!ticket || !template) {
     return (
-      <div className="flex h-40 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
-        <Spinner className="h-5 w-5 text-indigo-600" />
+      <div className="flex h-40 items-center justify-center rounded-xl bg-white dark:bg-slate-900 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700">
+        <Spinner className="h-5 w-5 text-[#00875A]" />
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+    <div className="overflow-hidden rounded-xl bg-white dark:bg-slate-900 p-3 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700">
       <div className="overflow-auto">
         <TicketPreview template={template} dataSnapshot={ticket.dataSnapshot} qrDataUrl={qr?.dataUrl} />
       </div>
@@ -72,3 +73,4 @@ function GeneratedTicketCard({ ticketId }: { ticketId: string }) {
     </div>
   );
 }
+

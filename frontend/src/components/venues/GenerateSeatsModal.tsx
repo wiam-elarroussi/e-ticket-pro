@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useGenerateSeats } from '@/hooks/useRows';
 import { Row } from '@/lib/venue-types';
+import { useI18nStore } from '@/store/i18n-store';
 
 const schema = z.object({
   count: z.number().int().min(1).max(500),
@@ -28,6 +29,7 @@ interface GenerateSeatsModalProps {
 
 export function GenerateSeatsModal({ open, onClose, row }: GenerateSeatsModalProps) {
   const generateSeats = useGenerateSeats();
+  const t = useI18nStore((s) => s.t);
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   // "row" peut venir de la liste (avec _count.seats) ou de la zone complète
@@ -57,44 +59,43 @@ export function GenerateSeatsModal({ open, onClose, row }: GenerateSeatsModalPro
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={`Générer les sièges — ${row.label}`}>
+    <Modal open={open} onClose={onClose} title={`${t('venues.form.generate_seats_title')} — ${row.label}`}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         {hasExistingSeats && (
           <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 ring-1 ring-inset ring-amber-200">
-            Ce rang contient déjà {row.seats?.length ?? row._count?.seats} siège(s). Cochez « Remplacer » ci-dessous pour les régénérer,
-            sinon la génération sera refusée.
+            {t('venues.form.seats_warning').replace('{count}', String(row.seats?.length ?? row._count?.seats))}
           </p>
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             type="number"
-            label="Nombre de sièges"
+            label={t('venues.form.seats_count')}
             error={form.formState.errors.count?.message}
             {...form.register('count', { valueAsNumber: true })}
           />
           <Input
             type="number"
-            label="Premier numéro"
+            label={t('venues.form.first_number')}
             error={form.formState.errors.startNumber?.message}
             {...form.register('startNumber', { valueAsNumber: true })}
           />
         </div>
-        <Select label="Sens de passage (numérotation)" {...form.register('direction')}>
-          <option value="LEFT_TO_RIGHT">Gauche → Droite</option>
-          <option value="RIGHT_TO_LEFT">Droite → Gauche</option>
+        <Select label={t('venues.form.direction_label')} {...form.register('direction')}>
+          <option value="LEFT_TO_RIGHT">{t('venues.form.direction_ltr')}</option>
+          <option value="RIGHT_TO_LEFT">{t('venues.form.direction_rtl')}</option>
         </Select>
         {hasExistingSeats && (
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" className="rounded border-slate-300" {...form.register('replaceExisting')} />
-            Remplacer les sièges existants
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <input type="checkbox" className="rounded border-slate-300 dark:border-slate-700" {...form.register('replaceExisting')} />
+            {t('venues.form.replace_existing_seats')}
           </label>
         )}
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
           <Button type="submit" isLoading={generateSeats.isPending}>
-            Générer
+            {t('venues.form.generate')}
           </Button>
         </div>
       </form>

@@ -2,6 +2,7 @@
 
 import { Modal } from './Modal';
 import { Button } from './Button';
+import { useI18nStore } from '@/store/i18n-store';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -17,20 +18,21 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = 'Confirmer',
+  confirmLabel,
   isLoading,
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
+  const t = useI18nStore((s) => s.t);
   return (
     <Modal open={open} onClose={onClose} title={title} widthClassName="max-w-sm">
-      <p className="text-sm text-slate-600">{description}</p>
+      <p className="text-sm text-slate-600 dark:text-slate-300">{description}</p>
       <div className="mt-6 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>
-          Annuler
+          {t('ui.cancel')}
         </Button>
         <Button variant="danger" onClick={onConfirm} isLoading={isLoading}>
-          {confirmLabel}
+          {confirmLabel ?? t('ui.confirm')}
         </Button>
       </div>
     </Modal>

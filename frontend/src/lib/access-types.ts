@@ -13,6 +13,7 @@ export interface AccessLog {
   reason: string | null;
   scannedById: string;
   scannedAt: string;
+  latencyMs: number | null;
 }
 
 export interface ScanResponse {
@@ -27,6 +28,6 @@ export interface ScanResponse {
 export interface SyncPackage {
   eventId: string;
   generatedAt: string;
-  whitelist: Array<{ id: string; code: string; checksum: string }>;
-  blacklist: string[];
+  whitelist: Array<{ id: string; code: string; checksum: string; nfcTagId: string | null }>;
+  blacklist: Array<{ id: string; code: string; nfcTagId: string | null }>;
 }

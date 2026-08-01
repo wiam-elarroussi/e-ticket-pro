@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useCreateVenue, useUpdateVenue } from '@/hooks/useVenues';
+import { useI18nStore } from '@/store/i18n-store';
 import { Venue } from '@/lib/venue-types';
 
 const schema = z.object({
@@ -28,6 +29,7 @@ export function VenueFormModal({ open, onClose, venue }: VenueFormModalProps) {
   const isEdit = !!venue;
   const createVenue = useCreateVenue();
   const updateVenue = useUpdateVenue();
+  const { t } = useI18nStore();
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -55,20 +57,37 @@ export function VenueFormModal({ open, onClose, venue }: VenueFormModalProps) {
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Modifier l’enceinte' : 'Nouvelle enceinte'}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEdit ? t('venues.form.edit_venue') : t('venues.form.new_venue')}
+    >
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Input label="Nom" error={form.formState.errors.name?.message} {...form.register('name')} />
-        <Input label="Ville" error={form.formState.errors.city?.message} {...form.register('city')} />
-        <Input label="Adresse" error={form.formState.errors.address?.message} {...form.register('address')} />
+        <Input
+          label={t('venues.form.venue_name')}
+          error={form.formState.errors.name?.message}
+          {...form.register('name')}
+        />
+        <Input
+          label={t('venues.form.city')}
+          error={form.formState.errors.city?.message}
+          {...form.register('city')}
+        />
+        <Input
+          label={t('venues.form.address')}
+          error={form.formState.errors.address?.message}
+          {...form.register('address')}
+        />
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
-          <Button type="submit" isLoading={isPending}>
-            {isEdit ? 'Enregistrer' : 'Créer'}
+          <Button type="submit" isLoading={isPending} className="bg-[#00875A] text-white hover:bg-[#00754e]">
+            {isEdit ? t('ui.save') : t('ui.create')}
           </Button>
         </div>
       </form>
     </Modal>
   );
 }
+

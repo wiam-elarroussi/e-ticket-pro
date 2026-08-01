@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth-store';
+import { useI18nStore } from '@/store/i18n-store';
 
 interface RequirePermissionProps {
   /** Permission requise pour voir la page. */
@@ -22,10 +23,11 @@ export function RequirePermission({ permission, children }: RequirePermissionPro
   const router = useRouter();
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const allowed = hasPermission(permission);
+  const t = useI18nStore((s) => s.t);
 
   useEffect(() => {
     if (!allowed) {
-      toast.error("Vous n'avez pas les droits nécessaires pour accéder à cette page");
+      toast.error(t('toast.no_permission'));
       router.replace('/dashboard');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

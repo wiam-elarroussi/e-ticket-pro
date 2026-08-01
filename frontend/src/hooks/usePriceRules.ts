@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import * as priceRulesApi from '@/api/price-rules';
 import { ApiError } from '@/lib/api-client';
+import { useI18nStore } from '@/store/i18n-store';
 
 function errorMessage(err: unknown, fallback: string) {
   return err instanceof ApiError ? err.message : fallback;
@@ -19,18 +20,20 @@ export function usePriceRules(eventId?: string) {
 
 export function useCreatePriceRule() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: priceRulesApi.createPriceRule,
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['price-rules', vars.eventId] });
-      toast.success('Règle tarifaire créée');
+      toast.success(t('toast.priceRule.created'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de la création')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.generic.create_error'))),
   });
 }
 
 export function useUpdatePriceRule() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: ({
       id,
@@ -41,9 +44,9 @@ export function useUpdatePriceRule() {
     }) => priceRulesApi.updatePriceRule(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['price-rules'] });
-      toast.success('Règle tarifaire mise à jour');
+      toast.success(t('toast.priceRule.updated'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de la mise à jour')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.generic.update_error'))),
   });
 }
 
@@ -58,12 +61,13 @@ export function useResolvePrice(query: priceRulesApi.ResolvePriceQuery | null) {
 
 export function useDeletePriceRule() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: priceRulesApi.deletePriceRule,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['price-rules'] });
-      toast.success('Règle tarifaire supprimée');
+      toast.success(t('toast.priceRule.deleted'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de la suppression')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.generic.delete_error'))),
   });
 }

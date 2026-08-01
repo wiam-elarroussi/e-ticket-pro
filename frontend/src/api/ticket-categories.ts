@@ -1,5 +1,5 @@
 import { apiFetch, EVENTS_API_URL } from '@/lib/api-client';
-import { TicketCategory } from '@/lib/pricing-types';
+import { AccreditationType, TicketCategory } from '@/lib/pricing-types';
 
 export function fetchTicketCategories() {
   return apiFetch<TicketCategory[]>('/ticket-categories', { baseUrl: EVENTS_API_URL });
@@ -10,6 +10,7 @@ export interface TicketCategoryPayload {
   name: string;
   isFree?: boolean;
   requiresNominativeInfo?: boolean;
+  accreditationType?: AccreditationType;
 }
 
 export function createTicketCategory(payload: TicketCategoryPayload) {

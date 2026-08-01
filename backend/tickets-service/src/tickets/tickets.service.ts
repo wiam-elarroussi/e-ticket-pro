@@ -84,6 +84,21 @@ export class TicketsService {
     return ticket;
   }
 
+  /**
+   * "Mes billets" (E-Ticket-Pay) : un client ne peut relire que les billets
+   * qu'il a lui-même achetés — `createdById` porte le customerId pour tout
+   * billet généré via /tickets/customer-purchase (cf. create()), c'est la
+   * seule information de propriété disponible côté tickets-service (pas de
+   * FK vers pos-service.Order dans ce microservice).
+   */
+  async findByIdForCustomer(id: string, customerId: string) {
+    const ticket = await this.prisma.generatedTicket.findUnique({ where: { id } });
+    if (!ticket || ticket.createdById !== customerId) {
+      throw new NotFoundException('Billet introuvable');
+    }
+    return ticket;
+  }
+
   /** Vérifie l'intégrité d'un code (checksum Mode 4) et son existence réelle — utilisé par le futur module 6 au scan. */
   async verifyCode(code: string) {
     const checksumValid = verifySecureCode(code);
@@ -92,6 +107,11 @@ export class TicketsService {
     }
     const ticket = await this.prisma.generatedTicket.findUnique({ where: { code } });
     return { checksumValid: true, exists: !!ticket, ticket };
+  }
+
+  async verifyNfc(nfcTagId: string) {
+    const ticket = await this.prisma.generatedTicket.findUnique({ where: { nfcTagId } });
+    return { exists: !!ticket, ticket };
   }
 
   async getCodeImage(id: string, type: CodeImageType) {

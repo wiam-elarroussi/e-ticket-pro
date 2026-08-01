@@ -108,7 +108,11 @@ export class AuthService {
       },
     });
 
-    await this.redis.set(`session:${sessionId}:refresh_hash`, refreshTokenHash, 'EX', REFRESH_TOKEN_TTL_SECONDS);
+    try {
+      await this.redis.set(`session:${sessionId}:refresh_hash`, refreshTokenHash, 'EX', REFRESH_TOKEN_TTL_SECONDS);
+    } catch (err) {
+      // Redis unavailable
+    }
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -147,7 +151,11 @@ export class AuthService {
       },
     });
 
-    await this.redis.set(`session:${sessionId}:refresh_hash`, newRefreshTokenHash, 'EX', REFRESH_TOKEN_TTL_SECONDS);
+    try {
+      await this.redis.set(`session:${sessionId}:refresh_hash`, newRefreshTokenHash, 'EX', REFRESH_TOKEN_TTL_SECONDS);
+    } catch (err) {
+      // Redis unavailable
+    }
 
     const accessToken = await this.issueAccessToken(session.user.id, session.user.role.code, sessionId);
 
@@ -162,12 +170,6 @@ export class AuthService {
   /**
    * Révocation d'urgence (module 1.3) : utilisée par un Admin/Superviseur pour
    * couper une session opérateur (ou par l'utilisateur lui-même) en temps réel.
-   *
-   * Pose un flag `session:{id}:revoked` en Redis, vérifié par JwtStrategy à
-   * chaque requête via le `sid` porté par le token. Contrairement à une
-   * blacklist par `jti`, ça fonctionne aussi quand c'est un tiers (admin) qui
-   * révoque une session dont il ne connaît pas le jti de l'access token en
-   * cours — le seul identifiant stable et connu des deux côtés est le sid.
    */
   async revokeSession(sessionId: string, revokedByUserId: string | null) {
     const session = await this.prisma.session.update({
@@ -175,10 +177,12 @@ export class AuthService {
       data: { revokedAt: new Date(), revokedById: revokedByUserId ?? undefined },
     });
 
-    await this.redis.del(`session:${sessionId}:refresh_hash`);
-    // TTL = durée de vie max d'un access token : au-delà, il aurait de toute
-    // façon expiré naturellement, inutile de garder le flag plus longtemps.
-    await this.redis.set(`session:${sessionId}:revoked`, '1', 'EX', ACCESS_TOKEN_TTL_SECONDS);
+    try {
+      await this.redis.del(`session:${sessionId}:refresh_hash`);
+      await this.redis.set(`session:${sessionId}:revoked`, '1', 'EX', ACCESS_TOKEN_TTL_SECONDS);
+    } catch (err) {
+      // Redis unavailable
+    }
 
     await this.permissionsService.invalidate(session.userId);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useCreatePriceRule, useUpdatePriceRule } from '@/hooks/usePriceRules';
+import { useI18nStore, TranslationKey } from '@/store/i18n-store';
 import { PriceRule, TicketCategory } from '@/lib/pricing-types';
 import { Stand, Zone } from '@/lib/venue-types';
 
@@ -23,33 +24,34 @@ function fromDatetimeLocal(value: string): string {
   return new Date(value).toISOString();
 }
 
-const schema = z
-  .object({
-    categoryId: z.string().uuid({ message: 'Choisissez une catégorie' }),
-    scope: z.enum(['EVENT', 'STAND', 'ZONE', 'SEAT']),
-    standId: z.string().optional(),
-    zoneId: z.string().optional(),
-    seatId: z.string().optional(),
-    price: z.number().min(0, 'Le prix doit être positif ou nul'),
-    validFrom: z.string().optional(),
-    validTo: z.string().optional(),
-  })
-  .superRefine((values, ctx) => {
-    if (values.scope === 'STAND' && !values.standId) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['standId'], message: 'Choisissez une tribune' });
-    }
-    if (values.scope === 'ZONE' && !values.zoneId) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['zoneId'], message: 'Choisissez une zone' });
-    }
-    if (values.scope === 'SEAT' && !values.seatId?.trim()) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['seatId'], message: "Renseignez l'identifiant du siège" });
-    }
-    if (values.validFrom && values.validTo && new Date(values.validTo) <= new Date(values.validFrom)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['validTo'], message: 'Doit être postérieure au début' });
-    }
-  });
+const buildSchema = (t: (key: TranslationKey) => string) =>
+  z
+    .object({
+      categoryId: z.string().uuid({ message: t('pricing.form.err_select_category') }),
+      scope: z.enum(['EVENT', 'STAND', 'ZONE', 'SEAT']),
+      standId: z.string().optional(),
+      zoneId: z.string().optional(),
+      seatId: z.string().optional(),
+      price: z.number().min(0, t('pricing.form.err_price_positive')),
+      validFrom: z.string().optional(),
+      validTo: z.string().optional(),
+    })
+    .superRefine((values, ctx) => {
+      if (values.scope === 'STAND' && !values.standId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['standId'], message: t('pricing.form.err_select_stand') });
+      }
+      if (values.scope === 'ZONE' && !values.zoneId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['zoneId'], message: t('pricing.form.err_select_zone') });
+      }
+      if (values.scope === 'SEAT' && !values.seatId?.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['seatId'], message: t('pricing.form.err_enter_seat_id') });
+      }
+      if (values.validFrom && values.validTo && new Date(values.validTo) <= new Date(values.validFrom)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['validTo'], message: t('pricing.form.err_date_after_start') });
+      }
+    });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 interface PriceRuleFormModalProps {
   open: boolean;
@@ -57,7 +59,6 @@ interface PriceRuleFormModalProps {
   eventId: string;
   categories: TicketCategory[];
   stands: (Stand & { zones: Zone[] })[];
-  /** Édition : seuls le prix et la fenêtre de validité sont modifiables (portée/cible/catégorie figées). */
   rule?: PriceRule | null;
 }
 
@@ -65,6 +66,8 @@ export function PriceRuleFormModal({ open, onClose, eventId, categories, stands,
   const isEdit = !!rule;
   const createRule = useCreatePriceRule();
   const updateRule = useUpdatePriceRule();
+  const { t } = useI18nStore();
+  const schema = useMemo(() => buildSchema(t), [t]);
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
   const scope = form.watch('scope');
@@ -120,17 +123,17 @@ export function PriceRuleFormModal({ open, onClose, eventId, categories, stands,
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Modifier la règle tarifaire' : 'Nouvelle règle tarifaire'}
+      title={isEdit ? t('pricing.form.edit_rule') : t('pricing.form.new_rule')}
       widthClassName="max-w-xl"
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <Select
-          label="Catégorie"
+          label={t('pricing.form.category')}
           disabled={isEdit}
           error={form.formState.errors.categoryId?.message}
           {...form.register('categoryId')}
         >
-          <option value="">Choisir une catégorie…</option>
+          <option value="">{t('pricing.form.select_category')}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -139,20 +142,20 @@ export function PriceRuleFormModal({ open, onClose, eventId, categories, stands,
         </Select>
 
         <Select
-          label="Portée"
+          label={t('quotas.form.scope')}
           disabled={isEdit}
           error={form.formState.errors.scope?.message}
           {...form.register('scope')}
         >
-          <option value="EVENT">Tout l’événement (tarif par défaut)</option>
-          <option value="STAND">Une tribune</option>
-          <option value="ZONE">Une zone</option>
-          <option value="SEAT">Un siège individuel</option>
+          <option value="EVENT">{t('pricing.form.scope_event_default')}</option>
+          <option value="STAND">{t('quotas.form.scope_stand')}</option>
+          <option value="ZONE">{t('quotas.form.scope_zone')}</option>
+          <option value="SEAT">{t('pricing.form.scope_seat')}</option>
         </Select>
 
         {scope === 'STAND' && (
-          <Select label="Tribune" error={form.formState.errors.standId?.message} {...form.register('standId')}>
-            <option value="">Choisir une tribune…</option>
+          <Select label={t('quotas.form.stand')} error={form.formState.errors.standId?.message} {...form.register('standId')}>
+            <option value="">{t('pricing.form.select_stand')}</option>
             {stands.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -163,16 +166,16 @@ export function PriceRuleFormModal({ open, onClose, eventId, categories, stands,
 
         {scope === 'ZONE' && (
           <>
-            <Select label="Tribune" disabled={isEdit} value={standId} onChange={(e) => form.setValue('standId', e.target.value)}>
-              <option value="">Choisir une tribune…</option>
+            <Select label={t('quotas.form.stand')} disabled={isEdit} value={standId} onChange={(e) => form.setValue('standId', e.target.value)}>
+              <option value="">{t('pricing.form.select_stand')}</option>
               {stands.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
               ))}
             </Select>
-            <Select label="Zone" disabled={isEdit} error={form.formState.errors.zoneId?.message} {...form.register('zoneId')}>
-              <option value="">Choisir une zone…</option>
+            <Select label={t('quotas.form.zone')} disabled={isEdit} error={form.formState.errors.zoneId?.message} {...form.register('zoneId')}>
+              <option value="">{t('pricing.form.select_zone')}</option>
               {zonesForStand.map((z) => (
                 <option key={z.id} value={z.id}>
                   {z.name}
@@ -184,8 +187,8 @@ export function PriceRuleFormModal({ open, onClose, eventId, categories, stands,
 
         {scope === 'SEAT' && (
           <Input
-            label="Identifiant du siège"
-            placeholder="UUID du siège"
+            label={t('pricing.form.seat_id')}
+            placeholder="UUID"
             disabled={isEdit}
             error={form.formState.errors.seatId?.message}
             {...form.register('seatId')}
@@ -196,25 +199,25 @@ export function PriceRuleFormModal({ open, onClose, eventId, categories, stands,
           type="number"
           step="0.01"
           min="0"
-          label="Prix (MAD)"
+          label={t('pricing.form.price_mad')}
           error={form.formState.errors.price?.message}
           {...form.register('price', { valueAsNumber: true })}
         />
 
-        <div className="border-t border-slate-100 pt-4">
-          <p className="mb-2 text-sm font-medium text-slate-700">
-            Fenêtre de validité (optionnel — tarification dynamique par période)
+        <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+          <p className="mb-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+            {t('pricing.form.validity_window')}
           </p>
           <div className="grid grid-cols-2 gap-4">
             <Input
               type="datetime-local"
-              label="Valide à partir de"
+              label={t('pricing.form.valid_from')}
               error={form.formState.errors.validFrom?.message}
               {...form.register('validFrom')}
             />
             <Input
               type="datetime-local"
-              label="Valide jusqu'à"
+              label={t('pricing.form.valid_to')}
               error={form.formState.errors.validTo?.message}
               {...form.register('validTo')}
             />
@@ -223,13 +226,14 @@ export function PriceRuleFormModal({ open, onClose, eventId, categories, stands,
 
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
-          <Button type="submit" isLoading={isPending}>
-            {isEdit ? 'Enregistrer' : 'Créer'}
+          <Button type="submit" isLoading={isPending} className="bg-[#00875A] text-white hover:bg-[#00754e]">
+            {isEdit ? t('ui.save') : t('ui.create')}
           </Button>
         </div>
       </form>
     </Modal>
   );
 }
+

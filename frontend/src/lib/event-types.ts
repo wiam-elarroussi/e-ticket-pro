@@ -14,6 +14,7 @@ export interface Event {
   salesOpenAt: string | null;
   salesCloseAt: string | null;
   maxPerOrder: number | null;
+  imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { SalesChannelsService } from './sales-channels.service';
 import { CreateSalesChannelDto } from './dto/create-sales-channel.dto';
 import { UpdateSalesChannelDto } from './dto/update-sales-channel.dto';
@@ -16,6 +18,14 @@ export class SalesChannelsController {
   @Get()
   findAll(@Query('partnerId') partnerId?: string) {
     return this.salesChannelsService.findAll(partnerId);
+  }
+
+  /** Résolu par pos-service lors d'un checkout public (E-Ticket-Pay). Doit précéder ':id'. */
+  @Public()
+  @UseGuards(AuthGuard('customer-jwt'))
+  @Get('web')
+  getWebChannel() {
+    return this.salesChannelsService.getOrCreateWebChannel();
   }
 
   @RequirePermissions('channels:read')

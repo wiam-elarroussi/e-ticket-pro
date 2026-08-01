@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3006",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -13,6 +13,8 @@
     "@tanstack/react-query": "^5.101.4",
     "chart.js": "^4.5.1",
     "clsx": "^2.1.1",
+    "docx": "^9.7.1",
+    "framer-motion": "^12.43.0",
     "jsqr": "^1.4.0",
     "konva": "^9.3.22",
     "lucide-react": "^1.27.0",

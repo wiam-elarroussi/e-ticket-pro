@@ -1,4 +1,4 @@
-import { apiFetch, EVENTS_API_URL } from '@/lib/api-client';
+import { apiFetch, uploadFile, EVENTS_API_URL } from '@/lib/api-client';
 import { Event, EventStatus, EventType } from '@/lib/event-types';
 
 export function fetchEvents(venueId?: string) {
@@ -22,6 +22,12 @@ export interface EventPayload {
   salesOpenAt?: string;
   salesCloseAt?: string;
   maxPerOrder?: number;
+  imageUrl?: string;
+}
+
+/** Upload de l'affiche — retourne le chemin à inclure dans EventPayload.imageUrl. */
+export function uploadEventImage(file: File) {
+  return uploadFile<{ url: string }>('/events/upload-image', EVENTS_API_URL, file);
 }
 
 export function createEvent(payload: EventPayload) {

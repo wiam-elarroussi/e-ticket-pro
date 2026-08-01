@@ -1,0 +1,25 @@
+{
+  "name": "E-Ticket Pro",
+  "short_name": "E-Ticket Pro",
+  "description": "Plateforme de billetterie et contrôle d'accès — supervision, guichet, contrôle d'accès et rapports.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#00875A",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

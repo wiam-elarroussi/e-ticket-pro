@@ -59,4 +59,15 @@ export class SalesChannelsService {
     await this.findById(id);
     return this.prisma.salesChannel.update({ where: { id }, data: { isActive } });
   }
+
+  /**
+   * Canal de vente en ligne (E-Ticket-Pay) : auto-provisionné au premier
+   * appel plutôt que dépendant d'une donnée de seed — évite un ID à
+   * synchroniser manuellement entre services. Un seul canal WEB existe.
+   */
+  async getOrCreateWebChannel() {
+    const existing = await this.prisma.salesChannel.findFirst({ where: { type: 'WEB' } });
+    if (existing) return existing;
+    return this.prisma.salesChannel.create({ data: { name: 'E-Ticket-Pay (vente en ligne)', type: 'WEB' } });
+  }
 }

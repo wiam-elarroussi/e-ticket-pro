@@ -1,4 +1,5 @@
-import { IsBoolean, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { AccreditationType } from '@prisma/client';
 
 export class CreateTicketCategoryDto {
   @IsString()
@@ -17,4 +18,9 @@ export class CreateTicketCategoryDto {
   @IsOptional()
   @IsBoolean()
   requiresNominativeInfo?: boolean;
+
+  /** Population accréditée (VIP/presse/délégations) — PUBLIC par défaut pour la billetterie grand public. */
+  @IsOptional()
+  @IsEnum(AccreditationType)
+  accreditationType?: AccreditationType;
 }

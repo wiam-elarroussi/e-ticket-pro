@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,13 +10,15 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useCreatePartnerQuota } from '@/hooks/usePartnerQuotas';
 import { SalesChannel } from '@/lib/types';
+import { useI18nStore, TranslationKey } from '@/store/i18n-store';
 
-const schema = z.object({
-  salesChannelId: z.string().optional().or(z.literal('')),
-  maxQuantity: z.number().int().min(1, 'Doit être ≥ 1'),
-});
+const buildSchema = (t: (key: TranslationKey) => string) =>
+  z.object({
+    salesChannelId: z.string().optional().or(z.literal('')),
+    maxQuantity: z.number().int().min(1, t('partners.form.err_min_1')),
+  });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 interface PartnerQuotaFormModalProps {
   open: boolean;
@@ -27,6 +29,8 @@ interface PartnerQuotaFormModalProps {
 
 export function PartnerQuotaFormModal({ open, onClose, partnerId, channels }: PartnerQuotaFormModalProps) {
   const createQuota = useCreatePartnerQuota();
+  const t = useI18nStore((s) => s.t);
+  const schema = useMemo(() => buildSchema(t), [t]);
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   useEffect(() => {
@@ -46,10 +50,10 @@ export function PartnerQuotaFormModal({ open, onClose, partnerId, channels }: Pa
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Nouveau quota">
+    <Modal open={open} onClose={onClose} title={t('partners.form.new_quota')}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Select label="Canal de vente (optionnel)" {...form.register('salesChannelId')}>
-          <option value="">Tous les canaux du partenaire</option>
+        <Select label={t('partners.form.channel_optional')} {...form.register('salesChannelId')}>
+          <option value="">{t('partners.form.all_partner_channels')}</option>
           {channels.map((channel) => (
             <option key={channel.id} value={channel.id}>
               {channel.name}
@@ -58,16 +62,16 @@ export function PartnerQuotaFormModal({ open, onClose, partnerId, channels }: Pa
         </Select>
         <Input
           type="number"
-          label="Quantité maximale"
+          label={t('partners.form.max_quantity')}
           error={form.formState.errors.maxQuantity?.message}
           {...form.register('maxQuantity', { valueAsNumber: true })}
         />
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
           <Button type="submit" isLoading={createQuota.isPending}>
-            Créer
+            {t('ui.create')}
           </Button>
         </div>
       </form>

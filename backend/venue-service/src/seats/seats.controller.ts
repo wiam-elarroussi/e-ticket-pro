@@ -1,12 +1,16 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { Public } from '../common/decorators/public.decorator';
+import { CurrentCustomer } from '../common/decorators/current-customer.decorator';
 import { SeatsService } from './seats.service';
 import { CreateSeatDto } from './dto/create-seat.dto';
 import { UpdateSeatDto } from './dto/update-seat.dto';
 import { UpdateSeatStatusDto } from './dto/update-seat-status.dto';
 import { BulkUpdateSeatStatusDto } from './dto/bulk-update-seat-status.dto';
+import { PublicUpdateSeatStatusDto } from './dto/public-update-seat-status.dto';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('seats')
@@ -19,10 +23,38 @@ export class SeatsController {
     return this.seatsService.findAll(rowId);
   }
 
-  @RequirePermissions('venues:read')
+  /** Lecture publique : le plan de sélection d'E-Ticket-Pay a besoin du statut temps réel d'un siège. */
+  @Public()
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.seatsService.findById(id);
+  }
+
+  /** Réservation temporaire panier (E-Ticket-Pay), 10 min — voir SeatsService.holdSeat. */
+  @Public()
+  @UseGuards(AuthGuard('customer-jwt'))
+  @Post(':id/hold')
+  holdSeat(@Param('id', ParseUUIDPipe) id: string, @CurrentCustomer('sub') customerId: string) {
+    return this.seatsService.holdSeat(id, customerId);
+  }
+
+  @Public()
+  @UseGuards(AuthGuard('customer-jwt'))
+  @Delete(':id/hold')
+  releaseSeat(@Param('id', ParseUUIDPipe) id: string, @CurrentCustomer('sub') customerId: string) {
+    return this.seatsService.releaseSeat(id, customerId);
+  }
+
+  /** Transition déclenchée par le flux d'achat public (pos-service, module Réservation & Achat). */
+  @Public()
+  @UseGuards(AuthGuard('customer-jwt'))
+  @Patch(':id/public-status')
+  publicUpdateStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: PublicUpdateSeatStatusDto,
+    @CurrentCustomer('sub') customerId: string,
+  ) {
+    return this.seatsService.publicUpdateStatus(id, dto, customerId);
   }
 
   @RequirePermissions('venues:create')

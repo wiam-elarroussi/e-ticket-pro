@@ -30,6 +30,15 @@ export class TicketTemplatesService {
     });
   }
 
+  /** Achat public (E-Ticket-Pay) : le client n'a pas à choisir de gabarit, un seul est utilisé par défaut. */
+  async findDefaultId(): Promise<{ id: string } | null> {
+    const template = await this.prisma.ticketTemplate.findFirst({
+      select: { id: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return template;
+  }
+
   async findById(id: string) {
     const template = await this.prisma.ticketTemplate.findUnique({ where: { id } });
     if (!template) {

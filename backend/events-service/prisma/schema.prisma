@@ -31,6 +31,11 @@ model Event {
   venueId  String      @map("venue_id") @db.Uuid
   status   EventStatus @default(DRAFT)
 
+  // Affiche/photo de l'événement — affichée sur le catalogue public E-Ticket-Pay.
+  // Chemin relatif renvoyé par POST /events/upload-image (ex: /uploads/events/xxx.jpg),
+  // pas d'URL externe attendue mais acceptée (même convention que TicketTemplate.imageUrl).
+  imageUrl String? @map("image_url") @db.VarChar(500)
+
   startAt DateTime @map("start_at")
   endAt   DateTime @map("end_at")
 
@@ -56,6 +61,16 @@ model Event {
 
 // Catalogue réutilisable entre événements (Plein Tarif, Enfant, VIP, Presse,
 // Gratuité/Invitation...) — indépendant du calendrier, configuré une fois.
+// Population accréditée (VIP/presse/délégations, cf. lettre de conformité FIFA
+// §1 "Gestion des Accréditations") — distincte du grand public, qui reste PUBLIC.
+enum AccreditationType {
+  PUBLIC
+  VIP
+  PRESS
+  DELEGATION
+  STAFF
+}
+
 model TicketCategory {
   id     String  @id @default(uuid()) @db.Uuid
   code   String  @unique @db.VarChar(30)
@@ -65,6 +80,7 @@ model TicketCategory {
   // capture lui-même est porté par le module 5 (POS), ceci n'est que le
   // marqueur de configuration indiquant quelles catégories l'exigent.
   requiresNominativeInfo Boolean @default(false) @map("requires_nominative_info")
+  accreditationType AccreditationType @default(PUBLIC) @map("accreditation_type")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -179,6 +195,9 @@ model Subscription {
   holderName  String             @map("holder_name") @db.VarChar(150)
   holderEmail String?            @map("holder_email") @db.VarChar(150)
   holderPhone String?            @map("holder_phone") @db.VarChar(30)
+  // Renseigné pour un achat public (E-Ticket-Pay) — exclusif de createdById,
+  // même principe que Order.customerId/operatorId côté pos-service.
+  customerId  String?            @map("customer_id") @db.Uuid
   seatId      String?            @map("seat_id") @db.Uuid
   // UID de la carte physique (badge NFC/RFID), enregistré au guichet via un
   // lecteur USB — même principe que GeneratedTicket.nfcTagId côté billets.
@@ -192,6 +211,7 @@ model Subscription {
   formula SubscriptionFormula @relation(fields: [formulaId], references: [id], onDelete: Restrict)
 
   @@index([formulaId])
+  @@index([customerId])
   @@map("subscriptions")
 }
 

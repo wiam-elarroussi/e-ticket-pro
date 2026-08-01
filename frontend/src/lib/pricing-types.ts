@@ -1,9 +1,12 @@
+export type AccreditationType = 'PUBLIC' | 'VIP' | 'PRESS' | 'DELEGATION' | 'STAFF';
+
 export interface TicketCategory {
   id: string;
   code: string;
   name: string;
   isFree: boolean;
   requiresNominativeInfo: boolean;
+  accreditationType: AccreditationType;
   createdAt: string;
   updatedAt: string;
 }

@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { OrdersModule } from './orders/orders.module';
+import { WalletModule } from './wallet/wallet.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 
@@ -17,6 +18,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     RedisModule,
     AuthModule,
     OrdersModule,
+    WalletModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

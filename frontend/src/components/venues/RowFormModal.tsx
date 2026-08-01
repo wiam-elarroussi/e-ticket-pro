@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useCreateRow } from '@/hooks/useRows';
+import { useI18nStore } from '@/store/i18n-store';
 
 const schema = z.object({
   label: z.string().min(1).max(50),
@@ -24,6 +25,7 @@ interface RowFormModalProps {
 
 export function RowFormModal({ open, onClose, zoneId }: RowFormModalProps) {
   const createRow = useCreateRow();
+  const t = useI18nStore((s) => s.t);
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   useEffect(() => {
@@ -37,21 +39,21 @@ export function RowFormModal({ open, onClose, zoneId }: RowFormModalProps) {
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Nouveau rang">
+    <Modal open={open} onClose={onClose} title={t('venues.form.new_row')}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Input label="Libellé" placeholder="Rang A" error={form.formState.errors.label?.message} {...form.register('label')} />
+        <Input label={t('venues.form.row_label')} placeholder={t('venues.form.row_label_placeholder')} error={form.formState.errors.label?.message} {...form.register('label')} />
         <Input
           type="number"
-          label="Ordre d'affichage"
+          label={t('venues.form.order_index')}
           error={form.formState.errors.orderIndex?.message}
           {...form.register('orderIndex', { valueAsNumber: true })}
         />
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
           <Button type="submit" isLoading={createRow.isPending}>
-            Créer
+            {t('ui.create')}
           </Button>
         </div>
       </form>

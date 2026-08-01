@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { useCreateSubscriptionFormula, useUpdateSubscriptionFormula } from '@/hooks/useSubscriptionFormulas';
 import { useVenues } from '@/hooks/useVenues';
 import { SubscriptionFormula } from '@/lib/subscription-types';
+import { useI18nStore, TranslationKey } from '@/store/i18n-store';
 
 function toDatetimeLocal(iso?: string | null): string {
   if (!iso) return '';
@@ -23,23 +24,24 @@ function fromDatetimeLocal(value: string): string {
   return new Date(value).toISOString();
 }
 
-const schema = z
-  .object({
-    name: z.string().min(1).max(150),
-    type: z.enum(['SAISON', 'ELIMINATOIRES', 'POULES']),
-    venueId: z.string().uuid({ message: 'Choisissez une enceinte' }),
-    price: z.number().min(0, 'Le prix doit être positif ou nul'),
-    validFrom: z.string().min(1, 'Date de début requise'),
-    validTo: z.string().min(1, 'Date de fin requise'),
-    globalAccess: z.boolean(),
-  })
-  .superRefine((values, ctx) => {
-    if (values.validFrom && values.validTo && new Date(values.validTo) <= new Date(values.validFrom)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['validTo'], message: 'Doit être postérieure au début' });
-    }
-  });
+const buildSchema = (t: (key: TranslationKey) => string) =>
+  z
+    .object({
+      name: z.string().min(1).max(150),
+      type: z.enum(['SAISON', 'ELIMINATOIRES', 'POULES']),
+      venueId: z.string().uuid({ message: t('subscriptions.form.err_select_venue') }),
+      price: z.number().min(0, t('subscriptions.form.err_price_positive')),
+      validFrom: z.string().min(1, t('subscriptions.form.err_start_required')),
+      validTo: z.string().min(1, t('subscriptions.form.err_end_required')),
+      globalAccess: z.boolean(),
+    })
+    .superRefine((values, ctx) => {
+      if (values.validFrom && values.validTo && new Date(values.validTo) <= new Date(values.validFrom)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['validTo'], message: t('subscriptions.form.err_end_after_start') });
+      }
+    });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 interface SubscriptionFormulaFormModalProps {
   open: boolean;
@@ -52,6 +54,8 @@ export function SubscriptionFormulaFormModal({ open, onClose, formula }: Subscri
   const createFormula = useCreateSubscriptionFormula();
   const updateFormula = useUpdateSubscriptionFormula();
   const { data: venues } = useVenues();
+  const t = useI18nStore((s) => s.t);
+  const schema = useMemo(() => buildSchema(t), [t]);
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -102,28 +106,28 @@ export function SubscriptionFormulaFormModal({ open, onClose, formula }: Subscri
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Modifier la formule' : 'Nouvelle formule d’abonnement'} widthClassName="max-w-xl">
+    <Modal open={open} onClose={onClose} title={isEdit ? t('subscriptions.form.edit_formula') : t('subscriptions.form.new_formula')} widthClassName="max-w-xl">
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Input label="Nom" error={form.formState.errors.name?.message} {...form.register('name')} />
+        <Input label={t('ui.name')} error={form.formState.errors.name?.message} {...form.register('name')} />
 
         <div className="grid grid-cols-2 gap-4">
-          <Select label="Type" disabled={isEdit} error={form.formState.errors.type?.message} {...form.register('type')}>
-            <option value="SAISON">Saison</option>
-            <option value="ELIMINATOIRES">Éliminatoires</option>
-            <option value="POULES">Poules</option>
+          <Select label={t('ui.type')} disabled={isEdit} error={form.formState.errors.type?.message} {...form.register('type')}>
+            <option value="SAISON">{t('subscriptions.form.type_season')}</option>
+            <option value="ELIMINATOIRES">{t('subscriptions.form.type_playoffs')}</option>
+            <option value="POULES">{t('subscriptions.form.type_groups')}</option>
           </Select>
           <Input
             type="number"
             step="0.01"
             min="0"
-            label="Prix (MAD)"
+            label={t('pricing.form.price_mad')}
             error={form.formState.errors.price?.message}
             {...form.register('price', { valueAsNumber: true })}
           />
         </div>
 
-        <Select label="Enceinte" disabled={isEdit} error={form.formState.errors.venueId?.message} {...form.register('venueId')}>
-          <option value="">Choisir une enceinte…</option>
+        <Select label={t('subscriptions.form.venue_label')} disabled={isEdit} error={form.formState.errors.venueId?.message} {...form.register('venueId')}>
+          <option value="">{t('subscriptions.form.select_venue')}</option>
           {(venues ?? []).map((venue) => (
             <option key={venue.id} value={venue.id}>
               {venue.name}
@@ -134,33 +138,31 @@ export function SubscriptionFormulaFormModal({ open, onClose, formula }: Subscri
         <div className="grid grid-cols-2 gap-4">
           <Input
             type="datetime-local"
-            label="Valide à partir de"
+            label={t('pricing.form.valid_from')}
             error={form.formState.errors.validFrom?.message}
             {...form.register('validFrom')}
           />
           <Input
             type="datetime-local"
-            label="Valide jusqu'à"
+            label={t('pricing.form.valid_to')}
             error={form.formState.errors.validTo?.message}
             {...form.register('validTo')}
           />
         </div>
 
-        <label className="flex items-start gap-2 rounded-lg bg-slate-50 p-3 ring-1 ring-inset ring-slate-200">
-          <input type="checkbox" className="mt-0.5 rounded border-slate-300" {...form.register('globalAccess')} />
-          <span className="text-sm text-slate-700">
-            <span className="font-medium">Accès global</span> — donne accès à tous les événements de l’enceinte,
-            sans avoir à gérer un calendrier. Décochez pour restreindre cette formule à une liste explicite
-            d’événements (onglet « Calendrier inclus »).
+        <label className="flex items-start gap-2 rounded-lg bg-slate-50 dark:bg-slate-800 p-3 ring-1 ring-inset ring-slate-200 dark:ring-slate-700">
+          <input type="checkbox" className="mt-0.5 rounded border-slate-300 dark:border-slate-700" {...form.register('globalAccess')} />
+          <span className="text-sm text-slate-700 dark:text-slate-300">
+            <span className="font-medium">{t('subscriptions.form.global_access_label')}</span> {t('subscriptions.form.global_access_desc')}
           </span>
         </label>
 
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
           <Button type="submit" isLoading={isPending}>
-            {isEdit ? 'Enregistrer' : 'Créer'}
+            {isEdit ? t('ui.save') : t('ui.create')}
           </Button>
         </div>
       </form>

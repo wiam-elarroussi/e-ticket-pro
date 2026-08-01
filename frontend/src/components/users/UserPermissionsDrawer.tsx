@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { usePermissionsCatalog } from '@/hooks/useRoles';
 import { useRemoveUserPermission, useSetUserPermission } from '@/hooks/useUsers';
 import { User } from '@/lib/types';
+import { useI18nStore } from '@/store/i18n-store';
 
 type EffectiveStatus = 'INHERITED' | 'GRANT' | 'DENY' | 'NONE';
 
@@ -21,6 +22,7 @@ export function UserPermissionsDrawer({ open, onClose, user }: UserPermissionsDr
   const { data: catalog } = usePermissionsCatalog();
   const setOverride = useSetUserPermission();
   const removeOverride = useRemoveUserPermission();
+  const t = useI18nStore((s) => s.t);
 
   const rolePermissionCodes = useMemo(
     () => new Set(user?.role.rolePermissions?.map((rp) => rp.permission.code) ?? []),
@@ -47,12 +49,12 @@ export function UserPermissionsDrawer({ open, onClose, user }: UserPermissionsDr
   const isPending = setOverride.isPending || removeOverride.isPending;
 
   return (
-    <Modal open={open} onClose={onClose} title={`Permissions — ${user.fullName}`} widthClassName="max-w-3xl">
-      <p className="mb-4 text-sm text-slate-500">
-        Le rôle <strong>{user.role.label}</strong> accorde certaines permissions par défaut. Les 3 boutons sont
-        identiques pour chaque ligne : <strong>Par défaut</strong> applique le comportement du rôle,{' '}
-        <strong>Autoriser</strong> / <strong>Interdire</strong> créent une exception <strong>pour cet utilisateur
-        uniquement</strong>, quel que soit son rôle.
+    <Modal open={open} onClose={onClose} title={`${t('users.permissions.title')} — ${user.fullName}`} widthClassName="max-w-3xl">
+      <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
+        {t('users.permissions.desc_part1')} <strong>{user.role.label}</strong> {t('users.permissions.desc_part2')}{' '}
+        <strong>{t('users.permissions.default')}</strong> {t('users.permissions.desc_part3')}{' '}
+        <strong>{t('users.permissions.allow')}</strong> / <strong>{t('users.permissions.deny')}</strong> {t('users.permissions.desc_part4')} <strong>{t('users.permissions.desc_part5')}</strong>
+        {t('users.permissions.desc_part6')}
       </p>
       <div className="max-h-[65vh] space-y-6 overflow-y-auto pr-1">
         {grouped.map(([module, permissions]) => (
@@ -68,27 +70,27 @@ export function UserPermissionsDrawer({ open, onClose, user }: UserPermissionsDr
                 return (
                   <li
                     key={perm.id}
-                    className="flex flex-col gap-2 rounded-md border border-slate-200 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-2 rounded-md border border-slate-200 dark:border-slate-800 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex flex-wrap items-center gap-2">
                         <StatusBadge status={status} />
-                        <p className="truncate font-mono text-xs text-slate-700">{perm.code}</p>
+                        <p className="truncate font-mono text-xs text-slate-700 dark:text-slate-300">{perm.code}</p>
                       </div>
-                      <p className="text-xs text-slate-500">{perm.description}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{perm.description}</p>
                     </div>
 
                     {/* Groupe de 3 boutons strictement identique (libellé, icône, ordre) sur
                         toutes les lignes — seul l'état "actif" change selon le statut courant.
                         Le badge à gauche est seul responsable de préciser si "Par défaut"
                         signifie ici hérité du rôle ou non attribué. */}
-                    <div className="flex shrink-0 overflow-hidden rounded-md ring-1 ring-inset ring-slate-300">
+                    <div className="flex shrink-0 overflow-hidden rounded-md ring-1 ring-inset ring-slate-300 dark:ring-slate-600">
                       <SegmentButton
                         active={status === 'INHERITED' || status === 'NONE'}
                         disabled={isPending || !override}
                         onClick={() => removeOverride.mutate({ id: user.id, permissionId: perm.id })}
                         icon={RotateCcw}
-                        label="Par défaut"
+                        label={t('users.permissions.default')}
                         tone="slate"
                       />
                       <SegmentButton
@@ -96,7 +98,7 @@ export function UserPermissionsDrawer({ open, onClose, user }: UserPermissionsDr
                         disabled={isPending || status === 'GRANT'}
                         onClick={() => setOverride.mutate({ id: user.id, permissionId: perm.id, effect: 'GRANT' })}
                         icon={Plus}
-                        label="Autoriser"
+                        label={t('users.permissions.allow')}
                         tone="green"
                       />
                       <SegmentButton
@@ -104,7 +106,7 @@ export function UserPermissionsDrawer({ open, onClose, user }: UserPermissionsDr
                         disabled={isPending || status === 'DENY'}
                         onClick={() => setOverride.mutate({ id: user.id, permissionId: perm.id, effect: 'DENY' })}
                         icon={Ban}
-                        label="Interdire"
+                        label={t('users.permissions.deny')}
                         tone="red"
                       />
                     </div>
@@ -120,20 +122,21 @@ export function UserPermissionsDrawer({ open, onClose, user }: UserPermissionsDr
 }
 
 function StatusBadge({ status }: { status: EffectiveStatus }) {
+  const t = useI18nStore((s) => s.t);
   switch (status) {
     case 'INHERITED':
-      return <Badge tone="indigo">🛡️ Héritée du rôle</Badge>;
+      return <Badge tone="indigo">{t('users.permissions.inherited_role')}</Badge>;
     case 'GRANT':
-      return <Badge tone="green">➕ Accordée (Exception)</Badge>;
+      return <Badge tone="green">{t('users.permissions.granted_exception')}</Badge>;
     case 'DENY':
-      return <Badge tone="red">🚫 Refusée (Exception)</Badge>;
+      return <Badge tone="red">{t('users.permissions.denied_exception')}</Badge>;
     case 'NONE':
-      return <Badge tone="slate">⚪ Non attribuée</Badge>;
+      return <Badge tone="slate">{t('users.permissions.not_assigned')}</Badge>;
   }
 }
 
 const segmentToneClasses = {
-  slate: { active: 'bg-slate-200 text-slate-800', inactive: 'text-slate-400 hover:bg-slate-50' },
+  slate: { active: 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100', inactive: 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' },
   green: { active: 'bg-green-600 text-white', inactive: 'text-slate-400 hover:bg-green-50 hover:text-green-700' },
   red: { active: 'bg-red-600 text-white', inactive: 'text-slate-400 hover:bg-red-50 hover:text-red-700' },
 } as const;
@@ -160,7 +163,7 @@ function SegmentButton({
       onClick={onClick}
       title={label}
       className={clsx(
-        'flex items-center gap-1 border-l border-slate-200 px-2.5 py-1.5 text-xs font-medium transition-colors first:border-l-0 disabled:cursor-default',
+        'flex items-center gap-1 border-l border-slate-200 dark:border-slate-800 px-2.5 py-1.5 text-xs font-medium transition-colors first:border-l-0 disabled:cursor-default',
         active ? segmentToneClasses[tone].active : segmentToneClasses[tone].inactive,
       )}
     >

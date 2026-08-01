@@ -198,10 +198,6 @@ const ROLES: Array<{ code: string; label: string; permissions: string[] }> = [
   },
   {
     code: 'CONTROLEUR',
-    // events:read/subscriptions:read : doit savoir pour quel événement il
-    // valide les accès et vérifier l'entrée automatique des abonnés (module 6).
-    // access:scan : son métier principal (module 6.1) — access:override
-    // reste un droit d'urgence distinct (forcer une entrée en cas de litige).
     label: 'Contrôleur',
     permissions: ['access:scan', 'access:override', 'events:read', 'subscriptions:read'],
   },
@@ -218,6 +214,14 @@ async function main() {
   }
 
   console.log('Seed : rôles système par défaut...');
+  // Suppression automatique de tout rôle hors des 4 rôles système officiels
+  await prisma.role.deleteMany({
+    where: {
+      code: { notIn: ['SUPER_ADMIN', 'SUPERVISEUR', 'CAISSIER', 'CONTROLEUR'] },
+      isSystem: false,
+    },
+  });
+
   for (const role of ROLES) {
     const created = await prisma.role.upsert({
       where: { code: role.code },
@@ -236,22 +240,27 @@ async function main() {
   }
 
   const superAdminRole = await prisma.role.findUniqueOrThrow({ where: { code: 'SUPER_ADMIN' } });
-  const existingAdmin = await prisma.user.findUnique({ where: { username: 'admin' } });
-
-  if (!existingAdmin) {
-    console.log('Seed : compte Super Administrateur initial...');
-    const passwordHash = await argon2.hash('ChangeMe!2026', { type: argon2.argon2id });
-    await prisma.user.create({
-      data: {
-        username: 'admin',
-        email: 'admin@eticketpro.local',
-        passwordHash,
-        fullName: 'Super Administrateur',
-        roleId: superAdminRole.id,
-      },
-    });
-    console.log('  -> username: admin / password: ChangeMe!2026 (à changer immédiatement en production)');
-  }
+  console.log('Seed : réinitialisation compte Super Administrateur...');
+  const passwordHash = await argon2.hash('ChangeMe!2026', { type: argon2.argon2id });
+  await prisma.user.upsert({
+    where: { username: 'admin' },
+    update: {
+      passwordHash,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+      isActive: true,
+      roleId: superAdminRole.id,
+    },
+    create: {
+      username: 'admin',
+      email: 'admin@eticketpro.local',
+      passwordHash,
+      fullName: 'Super Administrateur',
+      roleId: superAdminRole.id,
+      isActive: true,
+    },
+  });
+  console.log('  -> username: admin / password: ChangeMe!2026 (Compte réinitialisé et déverrouillé)');
 }
 
 main()

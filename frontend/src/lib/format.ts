@@ -1,3 +1,9 @@
+const madFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MAD' });
+
+export function formatMad(value: number | string): string {
+  return madFormatter.format(typeof value === 'string' ? Number(value) : value);
+}
+
 export function formatDateTime(value: string | null): string {
   if (!value) return '—';
   return new Date(value).toLocaleString('fr-FR', {

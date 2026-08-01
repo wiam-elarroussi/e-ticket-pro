@@ -49,4 +49,9 @@ export class UpdateEventDto {
   @IsInt()
   @Min(1)
   maxPerOrder?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imageUrl?: string;
 }

@@ -135,6 +135,8 @@ export class UsersService {
       }
     }
 
+    const passwordHash = dto.password ? await argon2.hash(dto.password, { type: argon2.argon2id }) : undefined;
+
     const updated = await this.prisma.user.update({
       where: { id },
       data: {
@@ -143,6 +145,7 @@ export class UsersService {
         fullName: dto.fullName,
         roleId: dto.roleId,
         isActive: dto.isActive,
+        ...(passwordHash ? { passwordHash, failedLoginAttempts: 0, lockedUntil: null } : {}),
       },
       include: { role: true },
     });

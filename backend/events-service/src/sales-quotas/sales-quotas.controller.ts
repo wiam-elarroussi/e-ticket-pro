@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { SalesQuotasService } from './sales-quotas.service';
 import { CreateSalesQuotaDto } from './dto/create-sales-quota.dto';
 import { UpdateSalesQuotaDto } from './dto/update-sales-quota.dto';
@@ -15,6 +16,17 @@ export class SalesQuotasController {
   @RequirePermissions('sales-quotas:read')
   @Get()
   findAll(@Query('eventId') eventId?: string) {
+    return this.salesQuotasService.findAll(eventId);
+  }
+
+  /**
+   * Appelée par pos-service lors d'un checkout public (E-Ticket-Pay) avec le
+   * token du client final — doit précéder ':id'. Même sortie que GET
+   * ci-dessus, juste accessible sans permission staff.
+   */
+  @Public()
+  @Get('public')
+  findAllPublic(@Query('eventId') eventId?: string) {
     return this.salesQuotasService.findAll(eventId);
   }
 

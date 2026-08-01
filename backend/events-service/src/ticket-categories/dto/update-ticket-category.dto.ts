@@ -1,4 +1,5 @@
-import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { AccreditationType } from '@prisma/client';
 
 export class UpdateTicketCategoryDto {
   @IsOptional()
@@ -13,4 +14,8 @@ export class UpdateTicketCategoryDto {
   @IsOptional()
   @IsBoolean()
   requiresNominativeInfo?: boolean;
+
+  @IsOptional()
+  @IsEnum(AccreditationType)
+  accreditationType?: AccreditationType;
 }

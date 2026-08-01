@@ -1,7 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
+import { PublicPurchaseSubscriptionDto } from './dto/public-purchase-subscription.dto';
 
 @Injectable()
 export class SubscriptionsService {
@@ -10,6 +11,40 @@ export class SubscriptionsService {
   async create(dto: CreateSubscriptionDto, createdById: string) {
     if (dto.nfcTagId) await this.assertNfcTagAvailable(dto.nfcTagId);
     return this.prisma.subscription.create({ data: { ...dto, createdById }, include: { formula: true } });
+  }
+
+  /**
+   * Achat public (E-Ticket-Pay, module Abonnements) : paiement carte simulé
+   * (même principe que le checkout de billets), pas d'opérateur — la carte
+   * est immédiatement active, rattachée au client plutôt qu'à un guichetier.
+   */
+  async publicPurchase(dto: PublicPurchaseSubscriptionDto, customerId: string) {
+    const formula = await this.prisma.subscriptionFormula.findUnique({ where: { id: dto.formulaId } });
+    if (!formula) {
+      throw new NotFoundException('Formule introuvable');
+    }
+    if (formula.validTo < new Date()) {
+      throw new BadRequestException("Cette formule n'est plus en vente");
+    }
+
+    return this.prisma.subscription.create({
+      data: {
+        formulaId: dto.formulaId,
+        holderName: dto.holderName,
+        holderEmail: dto.holderEmail,
+        holderPhone: dto.holderPhone,
+        customerId,
+      },
+      include: { formula: true },
+    });
+  }
+
+  findMinePublic(customerId: string) {
+    return this.prisma.subscription.findMany({
+      where: { customerId },
+      include: { formula: true },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   findAll(formulaId?: string) {

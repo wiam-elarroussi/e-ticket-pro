@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Circle, Group, Layer, Rect, Stage, Text } from 'react-konva';
+import { useEffect, useRef, useState } from 'react';
 import type Konva from 'konva';
 import { Row, Seat, SeatStatus } from '@/lib/venue-types';
+import { useI18nStore } from '@/store/i18n-store';
 
 interface SeatCanvasProps {
   rows: Row[];
@@ -13,9 +13,9 @@ interface SeatCanvasProps {
   onSelectionChange: (ids: Set<string>) => void;
   /** Glisser-déposer terminé : nouvelle position à persister. */
   onSeatDragEnd?: (seatId: string, x: number, y: number) => void;
-  /** Repositionnement (droit `venues:update`) — un Superviseur peut sélectionner/changer le statut sans déplacer les sièges. */
+  /** Repositionnement (droit `venues:update`) */
   canDragSeats?: boolean;
-  /** Guichet tactile (module 5) : chaque tap ajoute/retire du panier, sans avoir besoin de Maj (absente sur écran tactile). */
+  /** Guichet tactile (module 5) */
   multiSelectMode?: boolean;
 }
 
@@ -36,12 +36,6 @@ interface MarqueeRect {
   h: number;
 }
 
-/**
- * Plan des sièges d'une zone : clic = sélection (remplace), Maj+clic =
- * ajoute/retire, glisser sur le vide = sélection rectangle, clic sur le
- * libellé d'un rang = sélectionne tout le rang. Le déplacement individuel
- * (glisser un siège) reste possible et n'interfère pas avec la sélection.
- */
 export default function SeatCanvas({
   rows,
   width = 900,
@@ -52,21 +46,59 @@ export default function SeatCanvas({
   canDragSeats = true,
   multiSelectMode = false,
 }: SeatCanvasProps) {
+  const t = useI18nStore((s) => s.t);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(width);
   const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
   const [marqueeStart, setMarqueeStart] = useState<{ x: number; y: number } | null>(null);
   const [didDrag, setDidDrag] = useState(false);
+  const [konvaMod, setKonvaMod] = useState<any>(null);
+
+  useEffect(() => {
+    import('react-konva').then((m) => setKonvaMod(m)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (el.clientWidth > 0) {
+      setContainerWidth(el.clientWidth);
+    }
+    const observer = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w && w > 0) setContainerWidth(w);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const scale = containerWidth < width ? containerWidth / width : 1;
+  const displayWidth = containerWidth < width ? containerWidth : width;
+  const displayHeight = containerWidth < width ? height * scale : height;
+
+  if (!konvaMod) {
+    return (
+      <div ref={containerRef} style={{ width: '100%', height }} className="flex items-center justify-center rounded-2xl bg-slate-900/40">
+        <div className="flex items-center gap-3 text-slate-400">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#00875A] border-t-transparent" />
+          <span className="text-xs font-semibold">Chargement de la vue des sièges...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const { Stage, Layer, Group, Circle, Rect, Text } = konvaMod;
 
   const allSeats = rows.flatMap((r) =>
     (r.seats ?? []).map((s) => ({ id: s.id, x: (s.x ?? 0) + LABEL_OFFSET_X, y: s.y ?? 0 })),
   );
 
-  const setPointerCursor = (cursor: string) => (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+  const setPointerCursor = (cursor: string) => (e: any) => {
     const container = e.target.getStage()?.container();
     if (container) container.style.cursor = cursor;
   };
 
-  const handleStageMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Un clic direct sur un siège/libellé est géré par leurs propres handlers.
+  const handleStageMouseDown = (e: any) => {
     if (e.target !== e.target.getStage()) return;
     const pos = e.target.getStage()?.getRelativePointerPosition();
     if (!pos) return;
@@ -75,7 +107,7 @@ export default function SeatCanvas({
     setDidDrag(false);
   };
 
-  const handleStageMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleStageMouseMove = (e: any) => {
     if (!marqueeStart) return;
     const pos = e.target.getStage()?.getRelativePointerPosition();
     if (!pos) return;
@@ -94,7 +126,6 @@ export default function SeatCanvas({
       return;
     }
     if (!didDrag || (marquee.w < 4 && marquee.h < 4)) {
-      // Simple clic dans le vide : désélectionne tout.
       onSelectionChange(new Set());
     } else {
       const within = allSeats.filter(
@@ -123,20 +154,23 @@ export default function SeatCanvas({
   };
 
   return (
-    <Stage
-      width={width}
-      height={height}
-      onMouseDown={handleStageMouseDown}
-      onMouseMove={handleStageMouseMove}
-      onMouseUp={handleStageMouseUp}
-    >
+    <div ref={containerRef} className="w-full overflow-hidden">
+      <Stage
+        width={displayWidth}
+        height={displayHeight}
+        scaleX={scale}
+        scaleY={scale}
+        onMouseDown={handleStageMouseDown}
+        onMouseMove={handleStageMouseMove}
+        onMouseUp={handleStageMouseUp}
+      >
       <Layer>
         <Text
           x={0}
           y={4}
           width={width}
           align="center"
-          text="⚽ Côté Pelouse / Terrain  ▲"
+          text={t('venues.canvas.pitch_side')}
           fontSize={12}
           fontStyle="bold"
           fill="#16a34a"
@@ -153,7 +187,7 @@ export default function SeatCanvas({
                 text={row.label}
                 fontSize={11}
                 fontStyle="bold"
-                fill="#4338ca"
+                fill="#e2e8f0"
                 onClick={() => handleRowLabelClick(row)}
                 onTap={() => handleRowLabelClick(row)}
                 onMouseEnter={setPointerCursor('pointer')}
@@ -167,15 +201,15 @@ export default function SeatCanvas({
                     x={(seat.x ?? 0) + LABEL_OFFSET_X}
                     y={seat.y ?? 0}
                     draggable={canDragSeats}
-                    onDragEnd={(e) =>
+                    onDragEnd={(e: any) =>
                       onSeatDragEnd?.(seat.id, Math.round(e.target.x() - LABEL_OFFSET_X), Math.round(e.target.y()))
                     }
-                    onClick={(e) => handleSeatClick(seat, e.evt.shiftKey)}
+                    onClick={(e: any) => handleSeatClick(seat, e.evt.shiftKey)}
                     onTap={() => handleSeatClick(seat, false)}
                     onMouseEnter={setPointerCursor(canDragSeats ? 'grab' : 'pointer')}
                     onMouseLeave={setPointerCursor('default')}
                   >
-                    {isSelected && <Circle radius={SEAT_RADIUS + 4} stroke="#4F46E5" strokeWidth={2} dash={[3, 2]} />}
+                    {isSelected && <Circle radius={SEAT_RADIUS + 4} stroke="#c1272d" strokeWidth={2} dash={[3, 2]} />}
                     <Circle radius={SEAT_RADIUS} fill={seatStatusColors[seat.status]} stroke="#ffffff" strokeWidth={1.5} />
                     <Text
                       text={String(seat.number)}
@@ -200,8 +234,8 @@ export default function SeatCanvas({
             y={marquee.y}
             width={marquee.w}
             height={marquee.h}
-            fill="#4F46E51A"
-            stroke="#4F46E5"
+            fill="#c1272d1A"
+            stroke="#c1272d"
             strokeWidth={1}
             dash={[4, 4]}
             listening={false}
@@ -209,5 +243,6 @@ export default function SeatCanvas({
         )}
       </Layer>
     </Stage>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import * as ticketsApi from '@/api/tickets';
 import { ApiError } from '@/lib/api-client';
+import { useI18nStore } from '@/store/i18n-store';
 
 function errorMessage(err: unknown, fallback: string) {
   return err instanceof ApiError ? err.message : fallback;
@@ -27,14 +28,15 @@ export function useTicket(id: string | undefined) {
 
 export function useCreateTicket() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: ticketsApi.createTicket,
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['tickets', vars.templateId] });
       qc.invalidateQueries({ queryKey: ['ticket-templates'] });
-      toast.success('Billet généré');
+      toast.success(t('toast.ticket.generated'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de la génération')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.ticket.generate_error'))),
   });
 }
 
@@ -48,25 +50,27 @@ export function useCodeImage(id: string | undefined, type: 'qrcode' | 'barcode')
 
 export function useReprintTicket() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: ticketsApi.reprintTicket,
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['tickets', data.templateId] });
-      toast.success('Billet réimprimé (action tracée)');
+      toast.success(t('toast.ticket.reprinted'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de la réimpression')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.ticket.reprint_error'))),
   });
 }
 
 export function useCancelTicket() {
   const qc = useQueryClient();
+  const t = useI18nStore((s) => s.t);
   return useMutation({
     mutationFn: ticketsApi.cancelTicket,
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['tickets', data.templateId] });
       qc.invalidateQueries({ queryKey: ['tickets', 'detail', data.id] });
-      toast.success('Billet annulé (liste noire)');
+      toast.success(t('toast.ticket.cancelled'));
     },
-    onError: (err) => toast.error(errorMessage(err, 'Erreur lors de l’annulation')),
+    onError: (err) => toast.error(errorMessage(err, t('toast.ticket.cancel_error'))),
   });
 }

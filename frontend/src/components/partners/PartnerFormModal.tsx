@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useCreatePartner, useUpdatePartner } from '@/hooks/usePartners';
+import { useI18nStore } from '@/store/i18n-store';
 import { Partner } from '@/lib/types';
 
 const schema = z.object({
@@ -29,6 +30,7 @@ export function PartnerFormModal({ open, onClose, partner }: PartnerFormModalPro
   const isEdit = !!partner;
   const createPartner = useCreatePartner();
   const updatePartner = useUpdatePartner();
+  const { t } = useI18nStore();
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -62,25 +64,43 @@ export function PartnerFormModal({ open, onClose, partner }: PartnerFormModalPro
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Modifier le partenaire' : 'Nouveau partenaire'}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEdit ? t('partners.form.edit_partner') : t('partners.form.new_partner')}
+    >
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <Input
-          label="Raison sociale"
+          label={t('partners.form.company_name')}
           error={form.formState.errors.companyName?.message}
           {...form.register('companyName')}
         />
-        <Input label="Contact" error={form.formState.errors.contactName?.message} {...form.register('contactName')} />
-        <Input label="Email" type="email" error={form.formState.errors.email?.message} {...form.register('email')} />
-        <Input label="Téléphone" error={form.formState.errors.phone?.message} {...form.register('phone')} />
+        <Input
+          label={t('partners.form.contact_name')}
+          error={form.formState.errors.contactName?.message}
+          {...form.register('contactName')}
+        />
+        <Input
+          label={t('ui.email')}
+          type="email"
+          error={form.formState.errors.email?.message}
+          {...form.register('email')}
+        />
+        <Input
+          label={t('partners.form.phone')}
+          error={form.formState.errors.phone?.message}
+          {...form.register('phone')}
+        />
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
-          <Button type="submit" isLoading={isPending}>
-            {isEdit ? 'Enregistrer' : 'Créer'}
+          <Button type="submit" isLoading={isPending} className="bg-[#00875A] text-white hover:bg-[#00754e]">
+            {isEdit ? t('ui.save') : t('ui.create')}
           </Button>
         </div>
       </form>
     </Modal>
   );
 }
+

@@ -43,3 +43,8 @@ export function restorePartner(id: string) {
 export function hardDeletePartner(id: string) {
   return apiFetch<{ success: boolean }>(`/partners/${id}`, { method: 'DELETE' });
 }
+
+/** Portail partenaire (module 4) : émet une nouvelle clé API — affichée en clair une seule fois. */
+export function generatePartnerApiKey(id: string) {
+  return apiFetch<{ apiKey: string }>(`/partners/${id}/api-key`, { method: 'POST' });
+}

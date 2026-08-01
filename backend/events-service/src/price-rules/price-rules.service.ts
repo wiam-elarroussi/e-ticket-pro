@@ -30,6 +30,17 @@ export class PriceRulesService {
     });
   }
 
+  /** Prix "à partir de" affiché au catalogue public (E-Ticket-Pay) — le plus
+   * bas de toutes les règles tarifaires actives de l'événement, tous scopes
+   * confondus (EVENT/STAND/ZONE/SEAT). null si aucune règle n'est configurée. */
+  async findStartingPrice(eventId: string): Promise<{ price: string | null }> {
+    const result = await this.prisma.priceRule.aggregate({
+      where: { eventId },
+      _min: { price: true },
+    });
+    return { price: result._min.price?.toString() ?? null };
+  }
+
   findAll(eventId?: string) {
     return this.prisma.priceRule.findMany({
       where: eventId ? { eventId } : undefined,

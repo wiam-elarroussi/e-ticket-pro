@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useCreateGate } from '@/hooks/useGates';
+import { useI18nStore } from '@/store/i18n-store';
 
 const schema = z.object({
   name: z.string().min(1).max(100),
@@ -25,6 +26,7 @@ interface GateFormModalProps {
 
 export function GateFormModal({ open, onClose, venueId }: GateFormModalProps) {
   const createGate = useCreateGate();
+  const t = useI18nStore((s) => s.t);
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   useEffect(() => {
@@ -43,17 +45,17 @@ export function GateFormModal({ open, onClose, venueId }: GateFormModalProps) {
   });
 
   return (
-    <Modal open={open} onClose={onClose} title="Nouvelle porte">
+    <Modal open={open} onClose={onClose} title={t('venues.form.new_gate')}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Input label="Nom" placeholder="Porte 4" error={form.formState.errors.name?.message} {...form.register('name')} />
-        <Input label="Code" placeholder="P4" error={form.formState.errors.code?.message} {...form.register('code')} />
-        <Input label="Description" error={form.formState.errors.description?.message} {...form.register('description')} />
+        <Input label={t('ui.name')} placeholder={t('venues.form.gate_name_placeholder')} error={form.formState.errors.name?.message} {...form.register('name')} />
+        <Input label="Code" placeholder={t('venues.form.gate_code_placeholder')} error={form.formState.errors.code?.message} {...form.register('code')} />
+        <Input label={t('ui.description')} error={form.formState.errors.description?.message} {...form.register('description')} />
         <div className="mt-2 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
-            Annuler
+            {t('ui.cancel')}
           </Button>
           <Button type="submit" isLoading={createGate.isPending}>
-            Créer
+            {t('ui.create')}
           </Button>
         </div>
       </form>

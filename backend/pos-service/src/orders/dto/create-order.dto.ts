@@ -16,6 +16,8 @@ export enum PaymentMethodDto {
   CASH = 'CASH',
   CARD = 'CARD',
   VOUCHER = 'VOUCHER',
+  APPLE_PAY = 'APPLE_PAY',
+  GOOGLE_PAY = 'GOOGLE_PAY',
 }
 
 /**
