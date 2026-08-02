@@ -21,14 +21,48 @@ Microservices NestJS (un par module), chacun avec sa propre base PostgreSQL, plu
 
 Chaque service backend appelle les autres directement en HTTP (`ServicesClient`), en transmettant le token JWT de l'opérateur — pas de compte technique séparé.
 
-## Prérequis
+## Démarrage avec Docker (recommandé)
+
+La façon la plus simple de lancer toute la stack (7 microservices + PostgreSQL + Redis + frontend) : un seul `docker compose up`, sans installer Node ni PostgreSQL en local.
+
+**Prérequis** : [Docker Desktop](https://www.docker.com/products/docker-desktop/) (avec Docker Compose v2, inclus par défaut).
+
+```bash
+# 1. Génère une fois le fichier .env à la racine (clés RS256 + secrets de refresh token)
+bash docker/generate-env.sh
+
+# 2. Construit les images et démarre tous les services en arrière-plan
+docker compose up -d --build
+
+# 3. Première fois uniquement : crée le compte administrateur
+docker compose exec auth-service npm run prisma:seed
+# -> affiche : username: admin / password: ChangeMe!2026
+```
+
+Ouvrir **http://localhost:3006** et se connecter avec `admin` / `ChangeMe!2026` (à changer ensuite).
+
+Cette même stack expose aussi les microservices sur `localhost:3001`-`3005`/`3007`-`3008`, ce dont a besoin **E-Ticket-Pay** (le portail public, dépôt séparé — voir plus haut) pour fonctionner : il suffit de cloner ce dépôt-ci, faire `docker compose up -d --build`, puis lancer E-Ticket-Pay (`npm run dev`, ou son propre Docker) à côté — il se connectera automatiquement à ces mêmes ports.
+
+Commandes utiles :
+
+```bash
+docker compose logs -f auth-service   # suivre les logs d'un service
+docker compose down                   # tout arrêter (les données persistent dans le volume "pgdata")
+docker compose down -v                # tout arrêter ET supprimer les données
+```
+
+Si un des ports par défaut (5432, 6379, 3001-3008) est déjà utilisé sur votre machine, modifiez le mapping correspondant (`"HOTE:CONTENEUR"`) dans `docker-compose.yml`.
+
+## Démarrage manuel (sans Docker)
+
+Pour lancer les services individuellement (développement, debug) plutôt que via Docker.
+
+### Prérequis
 
 - Node.js 20+
 - PostgreSQL 14+ (une base par service, voir tableau ci-dessus)
 - Redis
 - OpenSSL (pour générer la paire de clés RS256 de `auth-service`)
-
-## Démarrage rapide
 
 ### 1. Bases de données
 

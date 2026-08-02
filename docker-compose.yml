@@ -1,0 +1,169 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  auth-service:
+    build:
+      context: ./backend/auth-service
+      dockerfile: ../Dockerfile
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://eticketpro:eticketpro_dev_pwd@postgres:5432/eticketpro_auth?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_CUSTOMER_REFRESH_SECRET: ${JWT_CUSTOMER_REFRESH_SECRET}
+      PORT: 3001
+    ports:
+      - "3001:3001"
+
+  events-service:
+    build:
+      context: ./backend/events-service
+      dockerfile: ../Dockerfile
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://eticketpro:eticketpro_dev_pwd@postgres:5432/eticketpro_events?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      PORT: 3002
+    ports:
+      - "3002:3002"
+
+  venue-service:
+    build:
+      context: ./backend/venue-service
+      dockerfile: ../Dockerfile
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://eticketpro:eticketpro_dev_pwd@postgres:5432/eticketpro_venue?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      PORT: 3003
+    ports:
+      - "3003:3003"
+
+  pos-service:
+    build:
+      context: ./backend/pos-service
+      dockerfile: ../Dockerfile
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://eticketpro:eticketpro_dev_pwd@postgres:5432/eticketpro_pos?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      AUTH_SERVICE_URL: http://auth-service:3001
+      EVENTS_SERVICE_URL: http://events-service:3002
+      VENUE_SERVICE_URL: http://venue-service:3003
+      TICKETS_SERVICE_URL: http://tickets-service:3005
+      PORT: 3004
+    ports:
+      - "3004:3004"
+
+  tickets-service:
+    build:
+      context: ./backend/tickets-service
+      dockerfile: ../Dockerfile
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://eticketpro:eticketpro_dev_pwd@postgres:5432/eticketpro_tickets?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      PORT: 3005
+    ports:
+      - "3005:3005"
+
+  access-service:
+    build:
+      context: ./backend/access-service
+      dockerfile: ../Dockerfile
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://eticketpro:eticketpro_dev_pwd@postgres:5432/eticketpro_access?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      EVENTS_SERVICE_URL: http://events-service:3002
+      VENUE_SERVICE_URL: http://venue-service:3003
+      TICKETS_SERVICE_URL: http://tickets-service:3005
+      PORT: 3007
+    ports:
+      - "3007:3007"
+
+  reports-service:
+    build:
+      context: ./backend/reports-service
+      dockerfile: ../Dockerfile
+    depends_on:
+      redis: { condition: service_healthy }
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      AUTH_SERVICE_URL: http://auth-service:3001
+      EVENTS_SERVICE_URL: http://events-service:3002
+      VENUE_SERVICE_URL: http://venue-service:3003
+      POS_SERVICE_URL: http://pos-service:3004
+      TICKETS_SERVICE_URL: http://tickets-service:3005
+      ACCESS_SERVICE_URL: http://access-service:3007
+      PORT: 3008
+    ports:
+      - "3008:3008"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - auth-service
+      - events-service
+      - venue-service
+      - pos-service
+      - tickets-service
+      - access-service
+      - reports-service
+    ports:
+      - "3006:3006"
+
+volumes:
+  pgdata:
