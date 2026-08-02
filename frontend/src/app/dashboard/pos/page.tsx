@@ -73,7 +73,7 @@ export default function PosPage() {
 function PosPageContent() {
   const { data: events } = useEvents();
   const { data: categories } = useTicketCategories();
-  const { data: templates } = useTicketTemplates();
+  const { data: templates, isError: templatesError } = useTicketTemplates();
   const { data: channels } = useSalesChannels();
   const { data: pastOrders } = useOrders();
   const checkout = useCheckout();
@@ -405,6 +405,11 @@ function PosPageContent() {
                 ))}
               </Select>
             </div>
+            {templatesError && (
+              <p className="rounded-lg bg-rose-50 dark:bg-rose-950/40 px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400">
+                {t('pos.templates_load_error')}
+              </p>
+            )}
           </div>
 
           {/* Étape 2 : Plan 2D des Zones */}

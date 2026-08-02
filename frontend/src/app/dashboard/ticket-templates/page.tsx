@@ -92,7 +92,9 @@ function TicketTemplatesPageContent() {
             </span>
             <Layout className="h-5 w-5 text-[#00875A]" />
           </div>
-          <p className="mt-2 text-3xl font-extrabold text-slate-900 dark:text-white">{kpis.totalTemplates}</p>
+          <p className="mt-2 text-3xl font-extrabold text-slate-900 dark:text-white">
+            {isError ? '—' : kpis.totalTemplates}
+          </p>
           <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
             {t('templates.kpi_total_sub')}
           </p>
@@ -105,7 +107,9 @@ function TicketTemplatesPageContent() {
             </span>
             <Ticket className="h-5 w-5 text-blue-600" />
           </div>
-          <p className="mt-2 text-3xl font-extrabold text-slate-900 dark:text-white">{kpis.totalGenerated}</p>
+          <p className="mt-2 text-3xl font-extrabold text-slate-900 dark:text-white">
+            {isError ? '—' : kpis.totalGenerated}
+          </p>
           <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
             {t('templates.kpi_issued_sub')}
           </p>
