@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type Konva from 'konva';
+import type * as ReactKonva from 'react-konva';
 import { MapPoint, Zone } from '@/lib/venue-types';
 
 interface ZonePolygonEditorProps {
@@ -80,7 +81,7 @@ export default function ZonePolygonEditor({
   const [containerWidth, setContainerWidth] = useState(NATIVE_WIDTH);
   const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  const [konvaMod, setKonvaMod] = useState<any>(null);
+  const [konvaMod, setKonvaMod] = useState<typeof ReactKonva | null>(null);
 
   useEffect(() => {
     // Dynamic import of react-konva on client mount to eliminate Next.js App Router ChunkLoadError (_next/undefined)
@@ -122,7 +123,7 @@ export default function ZonePolygonEditor({
     zoneGroupRefs.current[zoneId]?.to({ scaleX: s, scaleY: s, duration: 0.2 });
   };
 
-  const handleStageClick = (e: any) => {
+  const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (!onCanvasClick) return;
     if (e.target !== e.target.getStage()) return;
     const stage = stageRef.current;
@@ -130,12 +131,12 @@ export default function ZonePolygonEditor({
     if (pos) onCanvasClick({ x: Math.round(pos.x), y: Math.round(pos.y) });
   };
 
-  const setPointerCursor = (cursor: string) => (e: any) => {
+  const setPointerCursor = (cursor: string) => (e: Konva.KonvaEventObject<Event>) => {
     const container = e.target.getStage()?.container();
     if (container) container.style.cursor = cursor;
   };
 
-  const showTooltip = (zone: Zone, e: any) => {
+  const showTooltip = (zone: Zone, e: Konva.KonvaEventObject<MouseEvent>) => {
     const wrapper = containerRef.current;
     if (!wrapper) return;
     const bounds = wrapper.getBoundingClientRect();
@@ -166,7 +167,7 @@ export default function ZonePolygonEditor({
   };
 
   return (
-    <div ref={containerRef} className="relative w-full overflow-hidden">
+    <div ref={containerRef} className="relative w-full overflow-hidden" style={{ maxHeight }}>
       <Stage
         ref={stageRef}
         width={displayWidth || undefined}
@@ -193,7 +194,7 @@ export default function ZonePolygonEditor({
             return (
               <Group
                 key={zone.id}
-                ref={(node: any) => {
+                ref={(node: Konva.Group | null) => {
                   zoneGroupRefs.current[zone.id] = node;
                 }}
                 x={center.x}
@@ -202,14 +203,14 @@ export default function ZonePolygonEditor({
                 offsetY={center.y}
                 onClick={() => onZoneClick?.(zone.id)}
                 onTap={() => onZoneClick?.(zone.id)}
-                onMouseEnter={(e: any) => {
+                onMouseEnter={(e: Konva.KonvaEventObject<MouseEvent>) => {
                   setHoveredZoneId(zone.id);
                   setPointerCursor('pointer')(e);
                   animateZoneScale(zone.id, 1.02);
                   showTooltip(zone, e);
                 }}
-                onMouseMove={(e: any) => showTooltip(zone, e)}
-                onMouseLeave={(e: any) => {
+                onMouseMove={(e: Konva.KonvaEventObject<MouseEvent>) => showTooltip(zone, e)}
+                onMouseLeave={(e: Konva.KonvaEventObject<MouseEvent>) => {
                   setHoveredZoneId((current) => (current === zone.id ? null : current));
                   setPointerCursor('default')(e);
                   animateZoneScale(zone.id, 1);

@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Ticket, Lock, Eye, EyeOff, CheckCircle2, Sun, Moon } from 'lucide-react';
+import { Ticket, Lock, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { login } from '@/api/auth';
 import { ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';

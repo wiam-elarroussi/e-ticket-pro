@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { Banknote, CreditCard, Delete, Ticket as TicketIcon, Trash2, DollarSign, ShoppingBag, Printer, ShieldCheck, SmartphoneNfc, WifiOff, UploadCloud, CheckCircle2 } from 'lucide-react';
+import { Banknote, CreditCard, Delete, Ticket as TicketIcon, Trash2, DollarSign, ShoppingBag, SmartphoneNfc, WifiOff, UploadCloud } from 'lucide-react';
 import { useEvents } from '@/hooks/useEvents';
 import { useVenueFullTree } from '@/hooks/useVenues';
 import { useTicketCategories } from '@/hooks/useTicketCategories';
@@ -27,7 +27,6 @@ import { formatMad } from '@/lib/format';
 import { TranslationKey } from '@/store/i18n-store';
 import {
   saveCatalogSnapshot,
-  loadCatalogSnapshot,
   resolveOfflinePrice,
   getOfflineQueue,
   pushOfflineQueue,

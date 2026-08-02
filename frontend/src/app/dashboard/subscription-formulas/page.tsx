@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Pencil, Plus, Trash2, IdCard, Calendar, Users, ExternalLink } from 'lucide-react';
 import { useDeleteSubscriptionFormula, useSubscriptionFormulas } from '@/hooks/useSubscriptionFormulas';

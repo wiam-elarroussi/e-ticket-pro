@@ -12,7 +12,7 @@ type T = (key: TranslationKey) => string;
  * Traduit un User-Agent brut ou un contexte de canal en libellé lisible + icône.
  */
 export function parseUserAgent(
-  deviceInfo: any,
+  deviceInfo: string | { userAgent?: string | null; ua?: string | null } | null | undefined,
   salesChannel: { name: string; type: string } | null | undefined,
   t: T,
 ): DeviceDisplay {

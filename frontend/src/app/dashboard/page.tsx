@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   ArrowRight,
   ScanLine,
-  ShieldCheck,
   Ticket,
   Users2,
   TrendingUp,
@@ -13,7 +12,6 @@ import {
   CalendarDays,
   Palette,
   Store,
-  BarChart3,
   Users,
   CheckCircle2,
   AlertTriangle,
@@ -27,12 +25,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, HeadingLevel, WidthType, AlignmentType } from 'docx';
-import { useMe } from '@/hooks/useMe';
 import { useEvents } from '@/hooks/useEvents';
 import { useVenueFullTree } from '@/hooks/useVenues';
 import { useEventDashboard, useDownloadCrmExport } from '@/hooks/useReports';
 import { useAccessLogs } from '@/hooks/useAccess';
-import { useAuthStore } from '@/store/auth-store';
 import { useI18nStore } from '@/store/i18n-store';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { formatMad } from '@/lib/format';
@@ -52,8 +48,6 @@ const downloadBlob = (blob: Blob, fileName: string) => {
 };
 
 export default function DashboardHomePage() {
-  const { data: me } = useMe();
-  const hasPermission = useAuthStore((s) => s.hasPermission);
   const { lang, t } = useI18nStore();
 
 

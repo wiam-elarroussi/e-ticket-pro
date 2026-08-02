@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type Konva from 'konva';
+import type * as ReactKonva from 'react-konva';
 import { Row, Seat, SeatStatus } from '@/lib/venue-types';
 import { useI18nStore } from '@/store/i18n-store';
 
@@ -52,7 +53,7 @@ export default function SeatCanvas({
   const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
   const [marqueeStart, setMarqueeStart] = useState<{ x: number; y: number } | null>(null);
   const [didDrag, setDidDrag] = useState(false);
-  const [konvaMod, setKonvaMod] = useState<any>(null);
+  const [konvaMod, setKonvaMod] = useState<typeof ReactKonva | null>(null);
 
   useEffect(() => {
     import('react-konva').then((m) => setKonvaMod(m)).catch(() => {});
@@ -93,12 +94,12 @@ export default function SeatCanvas({
     (r.seats ?? []).map((s) => ({ id: s.id, x: (s.x ?? 0) + LABEL_OFFSET_X, y: s.y ?? 0 })),
   );
 
-  const setPointerCursor = (cursor: string) => (e: any) => {
+  const setPointerCursor = (cursor: string) => (e: Konva.KonvaEventObject<Event>) => {
     const container = e.target.getStage()?.container();
     if (container) container.style.cursor = cursor;
   };
 
-  const handleStageMouseDown = (e: any) => {
+  const handleStageMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (e.target !== e.target.getStage()) return;
     const pos = e.target.getStage()?.getRelativePointerPosition();
     if (!pos) return;
@@ -107,7 +108,7 @@ export default function SeatCanvas({
     setDidDrag(false);
   };
 
-  const handleStageMouseMove = (e: any) => {
+  const handleStageMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (!marqueeStart) return;
     const pos = e.target.getStage()?.getRelativePointerPosition();
     if (!pos) return;
@@ -201,10 +202,10 @@ export default function SeatCanvas({
                     x={(seat.x ?? 0) + LABEL_OFFSET_X}
                     y={seat.y ?? 0}
                     draggable={canDragSeats}
-                    onDragEnd={(e: any) =>
+                    onDragEnd={(e: Konva.KonvaEventObject<DragEvent>) =>
                       onSeatDragEnd?.(seat.id, Math.round(e.target.x() - LABEL_OFFSET_X), Math.round(e.target.y()))
                     }
-                    onClick={(e: any) => handleSeatClick(seat, e.evt.shiftKey)}
+                    onClick={(e: Konva.KonvaEventObject<MouseEvent>) => handleSeatClick(seat, e.evt.shiftKey)}
                     onTap={() => handleSeatClick(seat, false)}
                     onMouseEnter={setPointerCursor(canDragSeats ? 'grab' : 'pointer')}
                     onMouseLeave={setPointerCursor('default')}

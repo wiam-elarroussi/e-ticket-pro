@@ -15,7 +15,7 @@ import { Select } from '@/components/ui/Select';
 import { Spinner } from '@/components/ui/Spinner';
 import { EventFormModal } from '@/components/events/EventFormModal';
 import { RequirePermission } from '@/components/auth/RequirePermission';
-import { Event, EventStatus, EventType } from '@/lib/event-types';
+import { Event } from '@/lib/event-types';
 
 const dateFormatter = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
 
