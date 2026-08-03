@@ -87,6 +87,10 @@ export class ServicesClient {
     return this.request<{ price: string }>(this.eventsBaseUrl, `/price-rules/resolve?${params}`, token);
   }
 
+  getTicketCategory(token: string, categoryId: string) {
+    return this.request<{ id: string; name: string }>(this.eventsBaseUrl, `/ticket-categories/${categoryId}`, token);
+  }
+
   listSalesQuotas(token: string, eventId: string) {
     return this.request<
       Array<{
@@ -126,6 +130,10 @@ export class ServicesClient {
       maxPerOrder: number | null;
       venueId: string;
     }>(this.eventsBaseUrl, `/events/public/${eventId}`, token);
+  }
+
+  listPublicTicketCategories(token: string) {
+    return this.request<Array<{ id: string; name: string }>>(this.eventsBaseUrl, '/ticket-categories/public', token);
   }
 
   listPublicSalesQuotas(token: string, eventId: string) {

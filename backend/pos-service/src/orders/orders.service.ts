@@ -110,6 +110,12 @@ export class OrdersService {
       });
     }
 
+    const categoryNameById = new Map<string, string>();
+    for (const categoryId of new Set(resolvedItems.map((i) => i.categoryId))) {
+      const categoryRes = await this.services.getTicketCategory(token, categoryId);
+      if (categoryRes.status === 200) categoryNameById.set(categoryId, categoryRes.data.name);
+    }
+
     const soldSeatIds: string[] = [];
     const finalItems: Array<ResolvedItem & { ticketId: string }> = [];
     try {
@@ -132,6 +138,7 @@ export class OrdersService {
               awayTeam: event.awayTeam,
             },
             seat: { id: item.seatId, label: item.seatLabel ?? `Siège ${item.seatNumber}`, number: item.seatNumber },
+            category: { id: item.categoryId, name: categoryNameById.get(item.categoryId) ?? '' },
             buyer: { fullName: dto.buyerName, email: dto.buyerEmail, phone: dto.buyerPhone },
           },
         });
@@ -251,6 +258,11 @@ export class OrdersService {
       });
     }
 
+    const publicCategoriesRes = await this.services.listPublicTicketCategories(token);
+    const categoryNameById = new Map<string, string>(
+      publicCategoriesRes.status === 200 ? publicCategoriesRes.data.map((c) => [c.id, c.name]) : [],
+    );
+
     const soldSeatIds: string[] = [];
     const finalItems: Array<ResolvedItem & { ticketId: string; ticketCode: string }> = [];
     try {
@@ -277,6 +289,7 @@ export class OrdersService {
               awayTeam: event.awayTeam,
             },
             seat: { id: item.seatId, label: item.seatLabel ?? `Siège ${item.seatNumber}`, number: item.seatNumber },
+            category: { id: item.categoryId, name: categoryNameById.get(item.categoryId) ?? '' },
             buyer: { fullName: dto.buyerName, email: dto.buyerEmail, phone: dto.buyerPhone },
           },
         });
